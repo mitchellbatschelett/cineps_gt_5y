@@ -1,0 +1,2 @@
+"Metric","Predictors","Family","Density_Range","N_Original","N_Excluded_Outliers","N_Subjects_Final","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold"
+"str","Group","gaussian","11-100%",216,2,214,0.083568776852144,0.0173547458319345,"R^2",2.10383535971773,"F",0.0852158141395521,FALSE,0.001

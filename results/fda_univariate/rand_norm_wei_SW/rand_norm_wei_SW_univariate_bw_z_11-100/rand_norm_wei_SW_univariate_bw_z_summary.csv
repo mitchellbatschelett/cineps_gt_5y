@@ -1,0 +1,2 @@
+"Metric","Exposure","Predictors","Family","Density_Range","N_Original","N_Excluded_Outliers","N_Subjects_Final","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold","GBA_Sqrt_Applied"
+"rand_norm_wei_SW","bw_z","bw_z, eTIV, sex, sriskscore, age_at_5y_mri, Rel_Motion","gaussian","11-100%",171,3,169,0.338410305780598,0.0236212626085698,"R^2",10.5243258189381,"F",1.19125480448434e-70,TRUE,0.001,FALSE

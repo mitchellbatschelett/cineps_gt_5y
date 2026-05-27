@@ -1,0 +1,4 @@
+"Metric","Mean r","Min r","Max r","Mean ICC","Min ICC","Max ICC"
+"Global Efficiency (GE)","0.991","0.977","0.998","0.991","0.976","0.998"
+"Average Clustering (ACC)","0.997","0.990","1.000","0.997","0.991","0.999"
+"Small-Worldness (SW)","0.980","0.900","0.998","0.978","0.865","0.998"

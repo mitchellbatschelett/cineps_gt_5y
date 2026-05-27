@@ -1,0 +1,2 @@
+"Metric","Predictors","Family","Density_Range","N_Original","N_Excluded_Outliers","N_Subjects_Final","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold"
+"ACC","Group, age_at_5y_mri","gaussian","11-100%",216,2,214,0.944872742209558,0.012654543059306,"R^2",13.4499330514121,"F",2.58166664391085e-35,TRUE,0.001

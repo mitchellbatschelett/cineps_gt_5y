@@ -1,0 +1,2 @@
+"Metric","Predictors","Family","Density_Range","N_Original","N_Excluded_Outliers","N_Subjects_Final","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold"
+"rand_norm_wei_GE","Group, age_at_5y_mri, eTIV, sex, Rel_Motion","gaussian","11-100%",216,1,215,0.375357775609521,0.125021159233744,"R^2",17.1405544450504,"F",7.20625221726163e-110,TRUE,0.001

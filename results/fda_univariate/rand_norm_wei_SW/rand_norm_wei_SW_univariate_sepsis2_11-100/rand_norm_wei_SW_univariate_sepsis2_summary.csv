@@ -1,0 +1,2 @@
+"Metric","Exposure","Predictors","Family","Density_Range","N_Original","N_Excluded_Outliers","N_Subjects_Final","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold","GBA_Sqrt_Applied"
+"rand_norm_wei_SW","sepsis2","sepsis2, eTIV, sex, sriskscore, age_at_5y_mri, Rel_Motion","gaussian","11-100%",171,3,169,0.341618947608829,0.028356598851505,"R^2",10.6465029065234,"F",1.10321353854408e-73,TRUE,0.001,FALSE

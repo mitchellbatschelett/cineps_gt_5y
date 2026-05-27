@@ -1,0 +1,7 @@
+"Exposure","Selection_Frequency","Pct","Stable"
+"bpd2",0.1,10,FALSE
+"bw_z",0.11,11,FALSE
+"ga",0.45,45,FALSE
+"globalbrainscore2",0.42,42,FALSE
+"anyrop",0.77,77,TRUE
+"sepsis2",0.11,11,FALSE

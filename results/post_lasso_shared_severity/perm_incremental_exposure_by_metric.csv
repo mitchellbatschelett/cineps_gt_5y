@@ -1,0 +1,25 @@
+"metric","metric_label","exposure","exposure_label","K","achieved_cumPVE","T_inc","p_inc_perm"
+"rand_norm_wei_ACC","Clustering (ACC)","globalbrainscore2","GBS2",5,0.997621321324131,4.11510064166417,0.000999
+"rand_norm_wei_ACC","Clustering (ACC)","bpd2","BPD",5,0.997621321324131,1.36784710127617,0.039
+"rand_norm_wei_ACC","Clustering (ACC)","ga","Gestational Age",5,0.997621321324131,0.849600141717975,0.11
+"rand_norm_wei_ACC","Clustering (ACC)","bw_z","Birth Weight Z",5,0.997621321324131,0.214324453739861,0.452
+"rand_norm_wei_ACC","Clustering (ACC)","sepsis2","Sepsis",5,0.997621321324131,0.115231484434217,0.635
+"rand_norm_wei_ACC","Clustering (ACC)","anyrop","ROP",5,0.997621321324131,0.0371883541164666,0.869
+"rand_norm_wei_GE","Global Efficiency (GE)","bpd2","BPD",3,0.995891491826427,0.14005800522629,0.0699
+"rand_norm_wei_GE","Global Efficiency (GE)","ga","Gestational Age",3,0.995891491826427,0.114376103752016,0.0909
+"rand_norm_wei_GE","Global Efficiency (GE)","bw_z","Birth Weight Z",3,0.995891491826427,0.0938317456667578,0.122
+"rand_norm_wei_GE","Global Efficiency (GE)","anyrop","ROP",3,0.995891491826427,0.0421946484149843,0.332
+"rand_norm_wei_GE","Global Efficiency (GE)","globalbrainscore2","GBS2",3,0.995891491826427,0.0237123083888126,0.454
+"rand_norm_wei_GE","Global Efficiency (GE)","sepsis2","Sepsis",3,0.995891491826427,0.0107254410749366,0.701
+"rand_norm_wei_SW","Small-Worldness (SW)","anyrop","ROP",5,0.995390983446654,75.0021616481804,0.022
+"rand_norm_wei_SW","Small-Worldness (SW)","globalbrainscore2","GBS2",5,0.995390983446654,25.1801655224911,0.205
+"rand_norm_wei_SW","Small-Worldness (SW)","sepsis2","Sepsis",5,0.995390983446654,4.08696558202072,0.661
+"rand_norm_wei_SW","Small-Worldness (SW)","ga","Gestational Age",5,0.995390983446654,3.39320656296432,0.737
+"rand_norm_wei_SW","Small-Worldness (SW)","bpd2","BPD",5,0.995390983446654,2.47567726018751,0.771
+"rand_norm_wei_SW","Small-Worldness (SW)","bw_z","Birth Weight Z",5,0.995390983446654,1.20590971928943,0.922
+"str","Strength","globalbrainscore2","GBS2",3,0.999991587450297,552.30257969705,0.02
+"str","Strength","ga","Gestational Age",3,0.999991587450297,117.342706943693,0.274
+"str","Strength","bw_z","Birth Weight Z",3,0.999991587450297,61.148710752918,0.442
+"str","Strength","sepsis2","Sepsis",3,0.999991587450297,20.5000965300843,0.649
+"str","Strength","bpd2","BPD",3,0.999991587450297,16.867433815024,0.675
+"str","Strength","anyrop","ROP",3,0.999991587450297,3.39990883228008,0.846

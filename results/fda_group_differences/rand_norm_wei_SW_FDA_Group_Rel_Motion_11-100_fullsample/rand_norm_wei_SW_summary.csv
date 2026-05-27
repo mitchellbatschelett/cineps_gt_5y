@@ -1,0 +1,2 @@
+"Metric","Predictors","Family","Density_Range","N_Original","N_Excluded_Outliers","N_Subjects_Final","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold"
+"rand_norm_wei_SW","Group, Rel_Motion","scaled t","11-100%",216,3,213,0.438312757326078,0.00625606367897119,"Deviance explained",343.897815077085,"Chisq",1.60345102276882e-62,TRUE,0.001

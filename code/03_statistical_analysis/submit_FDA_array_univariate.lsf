@@ -1,0 +1,62 @@
+#!/bin/bash
+# =============================================================================
+# LSF ARRAY JOB: FDA Univariate Exposure-Metric Runs (28 cells)
+# =============================================================================
+#
+# PURPOSE
+#   Submits all 28 (exposure, metric) FDA univariate cells as parallel array
+#   tasks. Each task runs THREE_fda_univariate_pipeline.R for one cell of the
+#   run table defined in THREE_fda_univariate_runs.R.
+#
+# RUN TABLE
+#   Index 1-7:   strength            x 7 exposures   (gaussian)
+#   Index 8-14:  rand_norm_wei_GE    x 7 exposures   (gaussian)
+#   Index 15-21: rand_norm_wei_ACC   x 7 exposures   (gaussian)
+#   Index 22-28: rand_norm_wei_SW    x 7 exposures   (gaussian; per Methods 2.7.4
+#                                                    SW univariate caveat)
+#
+#   Within each metric block, exposure order is:
+#     bpd2, bw_z, ga, globalbrainscore2, anyrop, sepsis2, dwma_percent
+#
+# COMPUTATIONAL COST
+#   ~1-6 hours per cell on the configuration below.
+#
+# USAGE
+#   bsub < submit_FDA_array_univariate.lsf
+#
+# =============================================================================
+
+#BSUB -J "FDA_UNIV[16-17]"
+#BSUB -W 36:00
+#BSUB -n 24
+#BSUB -M 128000
+#BSUB -R "span[hosts=1]"
+#BSUB -q normal
+#BSUB -e /path/to/logs/fda_univariate/FDA_UNIV_%J_%I.err
+#BSUB -o /path/to/logs/fda_univariate/FDA_UNIV_%J_%I.out
+
+# =============================================================================
+# ENVIRONMENT
+# =============================================================================
+module purge
+module load R/4.4.0
+
+echo "=== FDA Univariate Array Job ==="
+echo "Job ID:      $LSB_JOBID"
+echo "Array Index: $LSB_JOBINDEX"
+echo "Host:        $(hostname)"
+echo "Start:       $(date)"
+echo "================================="
+
+# =============================================================================
+# PATHS
+# =============================================================================
+SCRIPT_DIR=/path/to/code/03_statistical_analysis
+cd $SCRIPT_DIR
+
+# =============================================================================
+# RUN SINGLE ANALYSIS
+# =============================================================================
+Rscript THREE_fda_univariate_runs.R $LSB_JOBINDEX
+
+echo "=== Run $LSB_JOBINDEX finished: $(date) ==="

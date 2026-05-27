@@ -1,0 +1,7 @@
+"Stage","Metric pair","Mean r","Min r","Max r"
+"Pre-normalization","ACC vs GE","0.864","0.776","0.959"
+"Pre-normalization","ACC vs Strength","0.938","0.887","0.980"
+"Pre-normalization","GE vs Strength","0.970","0.967","0.981"
+"Post-normalization","ACC vs GE","-0.348","-0.441","-0.256"
+"Post-normalization","ACC vs Strength","0.365","0.321","0.435"
+"Post-normalization","GE vs Strength","-0.286","-0.331","-0.068"

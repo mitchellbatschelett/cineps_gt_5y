@@ -1,0 +1,2 @@
+"Metric","Predictors","Family","Density_Range","N_Original","N_Excluded_Outliers","N_Subjects_Final","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold"
+"rand_norm_wei_SW","Group, age_at_5y_mri","scaled t","11-100%",216,3,213,0.437177233852472,0.00424708166778225,"Deviance explained",90.731590161653,"Chisq",1.43530136107074e-12,TRUE,0.001

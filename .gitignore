@@ -1,0 +1,13 @@
+# macOS / OS cruft
+.DS_Store
+
+# R session leftovers (can leak absolute paths, prior commands, data values)
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
+
+# Editor / IDE
+.vscode/
+*.swp
