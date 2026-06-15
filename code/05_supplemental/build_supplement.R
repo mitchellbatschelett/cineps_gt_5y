@@ -628,7 +628,7 @@ cat("========================================\n")
 #                                    outlier-excluded samples)
 #   4c  Supplementary Table 4   --- Per-IV PFFR output (84 rows)  [pending]
 #   4d  Supplementary Table 5   --- K-basis diagnostics (36 rows) [pending]
-#   4e  Supplementary Figs 6-10 --- Covariate beta(d) curves      [pending]
+#   4e  Supplementary Figs 7-11 --- Covariate beta(d) curves      [pending]
 #
 # 4a and 4b read from the analytic xlsx already loaded in Section 2.
 # 4c reads predictor_tests.csv + summary.csv from results/fda_group_differences/.
@@ -1224,14 +1224,14 @@ if (length(t5_blocks) == 0) {
 
 
 # ============================================================================
-# 4e: Supplementary Figures 6-10 - covariate / group beta(density) curves
+# 4e: Supplementary Figures 7-11 - covariate / group beta(density) curves
 # ============================================================================
 #
-# Figs 6-9: one figure per metric (Strength, Normalized GE, Normalized ACC,
+# Figs 7-10: one figure per metric (Strength, Normalized GE, Normalized ACC,
 #   Small-Worldness), each a 2x2 facet of the four COVARIATE beta(density)
 #   curves (TIV, Age at MRI, Sex, Relative motion) from the fully-adjusted
 #   PFFR fit, with pointwise 95% bootstrap CI ribbons.
-# Fig 10: the GROUP beta(density) curves for the two RAW metrics (Raw GE,
+# Fig 11: the GROUP beta(density) curves for the two RAW metrics (Raw GE,
 #   Raw ACC), 1x2 facet, rendered in red to distinguish from the normalized
 #   metrics' panels.
 #
@@ -1240,7 +1240,7 @@ if (length(t5_blocks) == 0) {
 #   facet, and theme conventions.
 # ============================================================================
 
-cat("\n--- 4e: Building Supplementary Figures 6-10 ---\n\n")
+cat("\n--- 4e: Building Supplementary Figures 7-11 ---\n\n")
 
 # Covariate panel order (matches figure captions: TIV, age, sex, motion)
 covar_order <- c("Total intracranial volume", "Age at MRI", "Sex", "Relative motion")
@@ -1315,7 +1315,60 @@ for (mspec in n4_t5_metrics) {
               length(unique(bdf$predictor)), length(unique(bdf$density))))
 }
 
-# --- Figs 6-9: covariate beta(d) curves, one figure per normalized metric ----
+# --- Supplementary Figure 6: unadjusted group beta(d), four normalized metrics
+#     Same building logic and aesthetics as the covariate beta(d) figures
+#     (Supp Figs 7-10) and main-text Figure 2: ribbon = bootstrap 95% CI,
+#     faceted 2x2 by metric. Uses the UNADJUSTED group-difference fits.
+n4_unadj_metrics <- list(
+  list(label = "Strength",        dir = "str_FDA_Group_11-100_fullsample",               prefix = "str"),
+  list(label = "Normalized GE",   dir = "rand_norm_wei_GE_FDA_Group_11-100_fullsample",  prefix = "rand_norm_wei_GE"),
+  list(label = "Normalized ACC",  dir = "rand_norm_wei_ACC_FDA_Group_11-100_fullsample", prefix = "rand_norm_wei_ACC"),
+  list(label = "Small-Worldness", dir = "rand_norm_wei_SW_FDA_Group_11-100_fullsample",  prefix = "rand_norm_wei_SW")
+)
+n4_unadj_levels <- vapply(n4_unadj_metrics, function(x) x$label, character(1))
+
+beta_unadj_group <- list()
+for (mspec in n4_unadj_metrics) {
+  rdata_path <- file.path(repo_root, "results", "fda_group_differences",
+                          mspec$dir, paste0(mspec$prefix, "_FDA_results.RData"))
+  cat(sprintf("  [%s] ", mspec$label))
+  bdf <- extract_beta_curves(rdata_path, mspec$label)
+  if (is.null(bdf)) { cat("no output\n"); next }
+  beta_unadj_group[[mspec$label]] <- bdf[bdf$predictor_raw == "Group", ]
+  cat("ok\n")
+}
+
+make_unadj_group_beta_fig <- function(fig_num) {
+  df <- do.call(rbind, beta_unadj_group)
+  if (is.null(df) || nrow(df) == 0) {
+    cat(sprintf("  [skip] Fig %d: unadjusted group beta (no data)\n", fig_num))
+    return(invisible(NULL))
+  }
+  df$metric <- factor(df$metric, levels = n4_unadj_levels)
+  p <- ggplot(df, aes(x = density, y = beta)) +
+    geom_hline(yintercept = 0, color = "grey60",
+               linetype = "dashed", linewidth = 0.4) +
+    geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper),
+                fill = "#1F77B4", alpha = 0.25) +
+    geom_line(color = "#1F4E79", linewidth = 0.8) +
+    facet_wrap(~ metric, ncol = 2, scales = "free_y") +
+    scale_x_continuous(breaks = seq(20, 100, by = 20),
+                       limits = c(density_min, density_max),
+                       expand = expansion(mult = c(0.01, 0.01))) +
+    labs(x = "Network density (%)",
+         y = expression(beta(d)),
+         title = sprintf("Supplementary Figure %d. Unadjusted group beta(density) curves",
+                         fig_num)) +
+    theme_supp() +
+    theme(strip.text = element_text(size = 10, face = "bold"))
+  save_fig(p, sprintf("SuppFig%d_unadjusted_group_beta", fig_num),
+           width_in = 8.5, height_in = 6.5)
+}
+
+make_unadj_group_beta_fig(6)
+
+
+# --- Figs 7-10: covariate beta(d) curves, one figure per normalized metric ----
 make_covariate_beta_fig <- function(metric_label, fig_num) {
   if (!metric_label %in% names(beta_all)) {
     cat(sprintf("  [skip] Fig %d: %s (no beta data)\n", fig_num, metric_label))
@@ -1351,12 +1404,12 @@ make_covariate_beta_fig <- function(metric_label, fig_num) {
   save_fig(p, fname, width_in = 8.5, height_in = 6.5)
 }
 
-make_covariate_beta_fig("Strength",        6)
-make_covariate_beta_fig("Normalized GE",   7)
-make_covariate_beta_fig("Normalized ACC",  8)
-make_covariate_beta_fig("Small-Worldness", 9)
+make_covariate_beta_fig("Strength",        7)
+make_covariate_beta_fig("Normalized GE",   8)
+make_covariate_beta_fig("Normalized ACC",  9)
+make_covariate_beta_fig("Small-Worldness", 10)
 
-# --- Fig 10: Group beta(d) for the two RAW metrics, rendered in red ----------
+# --- Fig 11: Group beta(d) for the two RAW metrics, rendered in red ----------
 df_raw <- do.call(rbind, list(beta_all[["Raw GE"]], beta_all[["Raw ACC"]]))
 if (!is.null(df_raw) && nrow(df_raw) > 0) {
   df_raw <- df_raw[df_raw$predictor == "Group (VPT vs FT)", ]
@@ -1364,7 +1417,7 @@ if (!is.null(df_raw) && nrow(df_raw) > 0) {
 }
 
 if (!is.null(df_raw) && nrow(df_raw) > 0) {
-  p_fig10 <- ggplot(df_raw, aes(x = density, y = beta)) +
+  p_fig11 <- ggplot(df_raw, aes(x = density, y = beta)) +
     geom_hline(yintercept = 0, color = "grey60",
                linetype = "dashed", linewidth = 0.4) +
     geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper),
@@ -1376,13 +1429,13 @@ if (!is.null(df_raw) && nrow(df_raw) > 0) {
                        expand = expansion(mult = c(0.01, 0.01))) +
     labs(x = "Network density (%)",
          y = expression(beta(d)),
-         title = "Supplementary Figure 10. Group beta(density): Raw GE and Raw ACC") +
+         title = "Supplementary Figure 11. Group beta(density): Raw GE and Raw ACC") +
     theme_supp() +
     theme(strip.text = element_text(size = 10, face = "bold"))
-  save_fig(p_fig10, "SuppFig10_raw_GE_ACC_group_beta",
+  save_fig(p_fig11, "SuppFig11_raw_GE_ACC_group_beta",
            width_in = 7.5, height_in = 3.5)
 } else {
-  cat("  [warning] Fig 10: no raw GE / raw ACC group beta data\n")
+  cat("  [warning] Fig 11: no raw GE / raw ACC group beta data\n")
 }
 
 
@@ -1396,7 +1449,7 @@ cat("========================================\n")
 #
 #   Supplementary Table 6  - Univariate fully-adjusted PFFR results
 #                            (7 exposures x 4 primary metrics = 28 rows)
-#   Supplementary Figs 11-14 - Univariate beta(density) curves per metric
+#   Supplementary Figs 12-15 - Univariate beta(density) curves per metric
 #                            (7 exposure panels each, 3-3-1 layout)
 #
 # Each cell is a fully-adjusted univariate PFFR model: one neonatal exposure
@@ -1434,7 +1487,7 @@ n5_metrics <- list(
 n5_metric_levels <- vapply(n5_metrics, function(x) x$label, character(1))
 
 # --- Exposure specs (7 candidate neonatal exposures; var name + label) -------
-# Order defines panel order in Figs 11-14 and row order within each metric
+# Order defines panel order in Figs 12-15 and row order within each metric
 # block of SuppTbl6 (matches THREE_fda_univariate_runs.R).
 n5_exposures <- list(
   list(var = "bpd2",              label = "BPD"),
@@ -1593,9 +1646,9 @@ if (length(stats_all) > 0) {
   cat("  [warning] no univariate stats collected\n")
 }
 
-# --- Supplementary Figures 11-14: per-metric univariate beta(d) panels -------
+# --- Supplementary Figures 12-15: per-metric univariate beta(d) panels -------
 # Layout: 3 - 3 - 1 (BPD/BWZ/GA / GBA/ROP/Sepsis / DWMA centered).
-cat("\n--- Building Supplementary Figures 11-14 ---\n\n")
+cat("\n--- Building Supplementary Figures 12-15 ---\n\n")
 
 make_univ_metric_fig <- function(metric_label, fig_num) {
   metric_curves <- do.call(rbind,
@@ -1642,10 +1695,10 @@ make_univ_metric_fig <- function(metric_label, fig_num) {
   save_fig(combined, fname, width_in = 9.0, height_in = 8.5)
 }
 
-make_univ_metric_fig("Strength",        11)
-make_univ_metric_fig("Normalized GE",   12)
-make_univ_metric_fig("Normalized ACC",  13)
-make_univ_metric_fig("Small-Worldness", 14)
+make_univ_metric_fig("Strength",        12)
+make_univ_metric_fig("Normalized GE",   13)
+make_univ_metric_fig("Normalized ACC",  14)
+make_univ_metric_fig("Small-Worldness", 15)
 
 cat("\n========================================\n")
 cat("Note 5: DONE\n")
@@ -1656,10 +1709,10 @@ cat("========================================\n")
 # ============================================================================
 # SUPPLEMENTARY NOTE 6: ACC STABILITY SELECTION SENSITIVITY ANALYSES
 #
-#   Supplementary Figure 15 - ACC stability selection, 4 highest-GBA VPT
+#   Supplementary Figure 16 - ACC stability selection, 4 highest-GBA VPT
 #                             participants removed (high_gba_rem branch).
 #                             GBA remains the only stable exposure (~88%).
-#   Supplementary Figure 16 - ACC stability selection, GBA recoded binary
+#   Supplementary Figure 17 - ACC stability selection, GBA recoded binary
 #                             (globalcatmod >=8 vs <8; gba_binary branch).
 #                             GBA (binary) remains the only stable exposure (~91%).
 #
@@ -1817,13 +1870,13 @@ n6_branches <- list(
   list(branch    = "high_gba_rem",
        subdir    = "rand_norm_wei_ACC_stabsel_11-100_high_gba_rem",
        gba_term  = "globalbrainscore2",
-       fig_num   = 15,
+       fig_num   = 16,
        freq_tag  = "ACC stability selection (high-GBA removed)",
        beta_tag  = "GBA effect on ACC (high-GBA removed)"),
   list(branch    = "gba_binary",
        subdir    = "rand_norm_wei_ACC_stabsel_11-100_gba_binary",
        gba_term  = "globalcatmod",
-       fig_num   = 16,
+       fig_num   = 17,
        freq_tag  = "ACC stability selection (GBA binary)",
        beta_tag  = "GBA (binary) effect on ACC")
 )
@@ -1884,17 +1937,17 @@ cat("========================================\n")
 # ============================================================================
 # SUPPLEMENTARY NOTE 7: SHARED-SEVERITY ASSESSMENT FRAMEWORK
 #
-#   Supplementary Figure 17 - Inter-exposure correlation heatmap
-#   Supplementary Figure 18 - PCA scree (A) + PC1/PC2 loadings (B)
-#   Supplementary Figure 19 - 8-panel scatterplots: exposure PC1 vs FPC1/FPC2
+#   Supplementary Figure 18 - Inter-exposure correlation heatmap
+#   Supplementary Figure 19 - PCA scree (A) + PC1/PC2 loadings (B)
+#   Supplementary Figure 20 - 8-panel scatterplots: exposure PC1 vs FPC1/FPC2
 #                             per metric
-#   Supplementary Figure 20 - 3-panel permutation results
+#   Supplementary Figure 21 - 3-panel permutation results
 #                             (A=global, B=incremental heatmap, C=latent severity)
 #   Supplementary Table 7   - Permutation test results (3 tests x metrics)
 #
 # Reads committed outputs from the standalone analysis script
 # (note7_shared_severity_analysis.R), in results/post_lasso_shared_severity/.
-# This builder only styles; it performs no analysis. Fig 19 reads the
+# This builder only styles; it performs no analysis. Fig 20 reads the
 # precomputed per-subject PC1_FPC_scores.csv (no in-builder FPCA).
 #
 # Reads the precomputed per-subject PC1/FPC scores to render the panels.
@@ -1920,9 +1973,9 @@ n7_exposure_levels <- c("BPD", "BWZ", "GA", "GBA", "ROP", "Sepsis")
 n7_metric_levels   <- c("Strength", "Normalized GE", "Normalized ACC", "Small-Worldness")
 
 # ----------------------------------------------------------------------------
-# Supplementary Figure 17: Inter-exposure correlation heatmap
+# Supplementary Figure 18: Inter-exposure correlation heatmap
 # ----------------------------------------------------------------------------
-cat("--- Building Supplementary Figure 17 (correlation heatmap) ---\n")
+cat("--- Building Supplementary Figure 18 (correlation heatmap) ---\n")
 
 corr_csv <- file.path(n7_root, "exposure_correlation_matrix.csv")
 if (file.exists(corr_csv)) {
@@ -1939,26 +1992,26 @@ if (file.exists(corr_csv)) {
     pivot_longer(-Var1, names_to = "Var2", values_to = "r") %>%
     mutate(Var1 = factor(Var1, levels = rownames(corr_df_raw)),
            Var2 = factor(Var2, levels = colnames(corr_df_raw)))
-  p_fig17 <- ggplot(corr_long, aes(x = Var2, y = Var1, fill = r)) +
+  p_fig18 <- ggplot(corr_long, aes(x = Var2, y = Var1, fill = r)) +
     geom_tile(color = "white", linewidth = 0.5) +
     geom_text(aes(label = sprintf("%.2f", r)), size = 3.2, color = "black") +
     scale_fill_gradient2(low = "#1F77B4", mid = "white", high = "#D62728",
                          midpoint = 0, limits = c(-1, 1), name = "Pearson r") +
     coord_fixed() +
     labs(x = NULL, y = NULL,
-         title = "Supplementary Figure 17. Inter-exposure correlation matrix") +
+         title = "Supplementary Figure 18. Inter-exposure correlation matrix") +
     theme_supp() +
     theme(axis.text.x = element_text(angle = 0))
-  save_fig(p_fig17, "SuppFig17_exposure_correlation_heatmap",
+  save_fig(p_fig18, "SuppFig18_exposure_correlation_heatmap",
            width_in = 6.5, height_in = 5.5)
 } else {
   cat(sprintf("  [missing] %s\n", corr_csv))
 }
 
 # ----------------------------------------------------------------------------
-# Supplementary Figure 18: PCA scree (A) + PC1/PC2 loadings (B)
+# Supplementary Figure 19: PCA scree (A) + PC1/PC2 loadings (B)
 # ----------------------------------------------------------------------------
-cat("\n--- Building Supplementary Figure 18 (PCA scree + loadings) ---\n")
+cat("\n--- Building Supplementary Figure 19 (PCA scree + loadings) ---\n")
 
 pca_var_csv  <- file.path(n7_root, "exposure_pca_variance.csv")
 pca_load_csv <- file.path(n7_root, "exposure_pca_loadings.csv")
@@ -1969,7 +2022,7 @@ if (file.exists(pca_var_csv) && file.exists(pca_load_csv)) {
                               n7_relabel[pca_load$Exposure], pca_load$Exposure)
   
   # Panel A: scree (bars = per-PC variance; dashed red line = cumulative)
-  p18_A <- ggplot(pca_var, aes(x = PC, y = Variance_Explained, group = 1)) +
+  p19_A <- ggplot(pca_var, aes(x = PC, y = Variance_Explained, group = 1)) +
     geom_col(fill = "#1F77B4", alpha = 0.7, width = 0.6) +
     geom_line(aes(y = Cumulative), color = "#D62728", linewidth = 0.8,
               linetype = "dashed") +
@@ -1989,7 +2042,7 @@ if (file.exists(pca_var_csv) && file.exists(pca_load_csv)) {
       dplyr::select(Exposure, PC1, PC2) %>%
       pivot_longer(c(PC1, PC2), names_to = "PC", values_to = "loading") %>%
       mutate(Exposure = factor(Exposure, levels = n7_exposure_levels))
-    p18_B <- ggplot(load_long, aes(x = Exposure, y = loading, fill = PC)) +
+    p19_B <- ggplot(load_long, aes(x = Exposure, y = loading, fill = PC)) +
       geom_col(position = position_dodge(width = 0.7), width = 0.65, alpha = 0.85) +
       geom_hline(yintercept = 0, color = "grey40", linewidth = 0.4) +
       scale_fill_manual(values = c("PC1" = "#1F77B4", "PC2" = "#FF7F0E")) +
@@ -1999,23 +2052,23 @@ if (file.exists(pca_var_csv) && file.exists(pca_load_csv)) {
       theme(legend.position = "top",
             plot.title = element_text(face = "bold", hjust = 0))
   } else {
-    p18_B <- patchwork::plot_spacer()
+    p19_B <- patchwork::plot_spacer()
   }
   
-  combined_18 <- (p18_A | p18_B) +
+  combined_19 <- (p19_A | p19_B) +
     patchwork::plot_annotation(
-      title = "Supplementary Figure 18. Principal component analysis of exposure set",
+      title = "Supplementary Figure 19. Principal component analysis of exposure set",
       theme = theme(plot.title = element_text(size = 12, face = "bold")))
-  save_fig(combined_18, "SuppFig18_exposure_PCA", width_in = 9.5, height_in = 4.5)
+  save_fig(combined_19, "SuppFig19_exposure_PCA", width_in = 9.5, height_in = 4.5)
 } else {
   cat("  [missing] PCA CSVs\n")
 }
 
 # ----------------------------------------------------------------------------
-# Supplementary Figure 19: 8-panel PC1 vs FPC1/FPC2 scatterplots per metric
+# Supplementary Figure 20: 8-panel PC1 vs FPC1/FPC2 scatterplots per metric
 # Reads precomputed PC1_FPC_scores.csv (no in-builder FPCA).
 # ----------------------------------------------------------------------------
-cat("\n--- Building Supplementary Figure 19 (PC1 vs FPC scatterplots) ---\n")
+cat("\n--- Building Supplementary Figure 20 (PC1 vs FPC scatterplots) ---\n")
 
 scores_csv <- file.path(n7_root, "PC1_FPC_scores.csv")
 if (file.exists(scores_csv)) {
@@ -2076,20 +2129,20 @@ if (file.exists(scores_csv)) {
     panels[[length(panels) + 1]] <- build_scatter_panel(n7_scores_long, "FPC1", ml, panel_letters[li]); li <- li + 1
     panels[[length(panels) + 1]] <- build_scatter_panel(n7_scores_long, "FPC2", ml, panel_letters[li]); li <- li + 1
   }
-  combined_19 <- patchwork::wrap_plots(panels, ncol = 2) +
+  combined_20 <- patchwork::wrap_plots(panels, ncol = 2) +
     patchwork::plot_annotation(
-      title = "Supplementary Figure 19. Exposure PC1 vs FPC scores per graph metric",
+      title = "Supplementary Figure 20. Exposure PC1 vs FPC scores per graph metric",
       theme = theme(plot.title = element_text(size = 12, face = "bold")))
-  save_fig(combined_19, "SuppFig19_PC1_vs_FPC_scatterplots", width_in = 9.5, height_in = 13)
+  save_fig(combined_20, "SuppFig20_PC1_vs_FPC_scatterplots", width_in = 9.5, height_in = 13)
 } else {
   cat(sprintf("  [missing] %s\n", scores_csv))
 }
 
 # ----------------------------------------------------------------------------
-# Supplementary Figure 20: 3-panel permutation results
+# Supplementary Figure 21: 3-panel permutation results
 # A = global, B = incremental heatmap, C = latent severity
 # ----------------------------------------------------------------------------
-cat("\n--- Building Supplementary Figure 20 (permutation results 3-panel) ---\n")
+cat("\n--- Building Supplementary Figure 21 (permutation results 3-panel) ---\n")
 
 global_csv <- file.path(n7_root, "perm_global_exposure_set_by_metric.csv")
 inc_csv    <- file.path(n7_root, "perm_incremental_exposure_by_metric.csv")
@@ -2136,14 +2189,14 @@ build_perm_panel <- function(df, value_col, panel_letter, panel_title, panel_sub
           plot.subtitle = element_text(size = 9, color = "grey30"))
 }
 
-p20_A <- build_perm_panel(global_df, "p_global_perm", "A", "Global exposure set",
+p21_A <- build_perm_panel(global_df, "p_global_perm", "A", "Global exposure set",
                           "Joint association of all exposures with FPCA scores")
 if (!is.null(inc_df) && "p_inc_perm" %in% names(inc_df)) {
   inc_plot_df <- inc_df %>%
     mutate(p_val = pmax(as.numeric(p_inc_perm), 1e-4),
            logp  = -log10(p_val),
            p_label = ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val)))
-  p20_B <- ggplot(inc_plot_df, aes(x = exposure_label, y = metric_label, fill = logp)) +
+  p21_B <- ggplot(inc_plot_df, aes(x = exposure_label, y = metric_label, fill = logp)) +
     geom_tile(color = "white", linewidth = 0.5) +
     geom_text(aes(label = p_label), size = 3) +
     scale_fill_gradient(low = "white", high = "#1F4E79", name = expression(-log[10](p))) +
@@ -2154,17 +2207,17 @@ if (!is.null(inc_df) && "p_inc_perm" %in% names(inc_df)) {
           plot.subtitle = element_text(size = 9, color = "grey30"),
           axis.text.x = element_text(angle = 0))
 } else {
-  p20_B <- patchwork::plot_spacer()
+  p21_B <- patchwork::plot_spacer()
 }
-p20_C <- build_perm_panel(latent_df, "p_severity_perm", "C", "Latent severity (PC1)",
+p21_C <- build_perm_panel(latent_df, "p_severity_perm", "C", "Latent severity (PC1)",
                           "Single-axis exposure summary")
 
-combined_20perm <- (p20_A | p20_B) / (p20_C | patchwork::plot_spacer()) +
+combined_21perm <- (p21_A | p21_B) / (p21_C | patchwork::plot_spacer()) +
   patchwork::plot_layout(heights = c(1, 1)) +
   patchwork::plot_annotation(
-    title = "Supplementary Figure 20. Permutation-based exposure-metric association tests",
+    title = "Supplementary Figure 21. Permutation-based exposure-metric association tests",
     theme = theme(plot.title = element_text(size = 12, face = "bold")))
-save_fig(combined_20perm, "SuppFig20_permutation_results", width_in = 11, height_in = 8)
+save_fig(combined_21perm, "SuppFig21_permutation_results", width_in = 11, height_in = 8)
 
 # ----------------------------------------------------------------------------
 # Supplementary Table 7: Combined permutation results

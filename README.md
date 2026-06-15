@@ -15,7 +15,7 @@ The repository contains the saved statistical outputs in `results/`, so you can 
 
 ```bash
 Rscript code/04_results_figures_tables/build_main_results.R   # Tables 1-3, Figures 2-5
-Rscript code/05_supplemental/build_supplement.R               # Supp Tables 1-7, Supp Figures 1-20
+Rscript code/05_supplemental/build_supplement.R               # Supp Tables 1-7, Supp Figures 1-21
 ```
 
 Both scripts locate the repository root automatically (see "How paths work" below) and write into `tables/` and `figures/`.
@@ -161,7 +161,7 @@ car, cowplot, patchwork, gridExtra, viridis, irr, parallel
 
 - **`ONE_density_group_difference.R`** — tests group differences in unthresholded connectome density (Welch's *t* + ANCOVA), with a 2-SD outlier sensitivity branch. Produces Figure 1, the density column of Table 2, and Supplementary Table 3.
 - **`TWO_fda_pipeline.R` / `TWO_fda_group_difference_runs.R`** — fits density-resolved penalized function-on-scalar regression (PFFR) models for VPT-vs-FT group differences. The pipeline does one model; the runs driver defines the 36 (metric × covariate-configuration) cells and selects one by `$LSB_JOBINDEX`. Uses the `scat` family for the small-worldness metric and gaussian otherwise.
-- **`THREE_fda_univariate_pipeline.R` / `THREE_fda_univariate_runs.R`** — fits per-exposure PFFR models within the VPT cohort, fully adjusted for forced covariates (corrected age at MRI, eTIV, sex, relative motion, social risk score). The runs driver defines the 28 (exposure × metric) cells. Used for Supplementary Figures 11-14 and Supplementary Table 6.
+- **`THREE_fda_univariate_pipeline.R` / `THREE_fda_univariate_runs.R`** — fits per-exposure PFFR models within the VPT cohort, fully adjusted for forced covariates (corrected age at MRI, eTIV, sex, relative motion, social risk score). The runs driver defines the 28 (exposure × metric) cells. Used for Supplementary Figures 12-15 and Supplementary Table 6.
 - **`FOUR_fda_stability_selection_pipeline.R` / `FOUR_fda_stability_selection_runs.R`** — runs the density-resolved stability-selection procedure for each metric: 100 random 60/40 splits with group LASSO, then re-fits the final PFFR with selected exposures and bootstrap 95% CIs. The runs driver defines the four main-text metric runs plus two ACC sensitivity branches (`high_gba_rem` and `gba_binary`).
 - **`submit_FDA_array_group_diff.lsf` / `submit_FDA_array_univariate.lsf`** — illustrative LSF array launchers for the 36 group-difference cells and the 28 univariate cells, respectively. Each launcher documents its run table and per-job resource requests in its header.
 
@@ -171,8 +171,8 @@ car, cowplot, patchwork, gridExtra, viridis, irr, parallel
 
 ### `code/05_supplemental/`
 
-- **`build_supplement.R`** — generates every Supplementary Figure (1-20) and Supplementary Table (1-7) from saved results and analytic data, using the same path, helper, and naming conventions as `build_main_results.R`. Organized into seven Notes; each Note prints its own progress banner.
-- **`note7_shared_severity_analysis.R`** — standalone analysis generator for Supplementary Note 7 (the shared-severity / exposure-PCA framework). Runs the per-metric PFFR residualization → FPCA → Freedman-Lane permutation procedure (B = 1000), writes outputs to `results/post_lasso_shared_severity/`, and exports the per-subject PC1 + FPC1 + FPC2 scores (`PC1_FPC_scores.csv`) so the supplement builder can render Supplementary Figure 19 without re-running the FPCA.
+- **`build_supplement.R`** — generates every Supplementary Figure (1-21) and Supplementary Table (1-7) from saved results and analytic data, using the same path, helper, and naming conventions as `build_main_results.R`. Organized into seven Notes; each Note prints its own progress banner.
+- **`note7_shared_severity_analysis.R`** — standalone analysis generator for Supplementary Note 7 (the shared-severity / exposure-PCA framework). Runs the per-metric PFFR residualization → FPCA → Freedman-Lane permutation procedure (B = 1000), writes outputs to `results/post_lasso_shared_severity/`, and exports the per-subject PC1 + FPC1 + FPC2 scores (`PC1_FPC_scores.csv`) so the supplement builder can render Supplementary Figure 20 without re-running the FPCA.
 - **`rand_norm_pilot_validation.m`** — pilot validation comparing graph-metric normalization with 100 versus 1000 random networks, on a 30-subject subset. Outputs per-subject `.mat` files to `data/intermediate/pilot_validation_results/`. The number of random networks is one of the key parameters governing null-model precision; this pilot established that 100 is sufficient.
 - **`merge_pilot_validation.m`** — combines the 30 per-subject `.mat` outputs from `rand_norm_pilot_validation.m` into the merged workbook `data/intermediate/pilot_1000null_merged.xlsx`, which the supplement builder reads to produce Supplementary Note 2 (null-model validation: Supplementary Table 2, Supplementary Figure 3).
 - **`network_fragmentation.m`** — computes the percentage of subjects with a single connected component at each of the 400 density thresholds, used to establish the 11% lower density floor. Output is `data/intermediate/fragmentation_by_density.csv`, which feeds Supplementary Figure 4.
@@ -203,6 +203,6 @@ car, cowplot, patchwork, gridExtra, viridis, irr, parallel
 - `fda_stability_selection/<metric>_stabsel_11-100/` — one directory per main-text metric run, plus `ACC_sensitivity/` for the two ACC sensitivity branches. Each contains the `*_stabsel_results.RData`, selection matrix (CSV + RDS), per-exposure final-fit beta(d) PNGs, and the stability-selection frequency plot.
 - `post_lasso_shared_severity/` — outputs from `note7_shared_severity_analysis.R`: exposure clusters, correlation matrix, PCA loadings/variance, VIFs, the per-subject `PC1_FPC_scores.csv`, and the permutation results (global, incremental, and latent-severity).
 
-**Figures and tables** (`figures/`, `tables/`) — both populated by the builders. `figures/main/` holds Figures 1-5 (PNG + PDF), `figures/supplement/` holds Supplementary Figures 1-20 (PNG + PDF), `tables/main/` holds Tables 1-3 (CSV), and `tables/supplement/` holds Supplementary Tables 1-7 (CSV).
+**Figures and tables** (`figures/`, `tables/`) — both populated by the builders. `figures/main/` holds Figures 1-5 (PNG + PDF), `figures/supplement/` holds Supplementary Figures 1-21 (PNG + PDF), `tables/main/` holds Tables 1-3 (CSV), and `tables/supplement/` holds Supplementary Tables 1-7 (CSV).
 
 ---
