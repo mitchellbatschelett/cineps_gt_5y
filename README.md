@@ -1,6 +1,6 @@
 # Reproducibility repository for:
 
-> **Title:** The effects of very premature birth and prematurity-related morbidities on brain structural connectivity at early school age
+> **Title:** Effects of very preterm birth and related morbidities on brain structural connectivity at school age
 >
 > **Authors:** Mitchell A. Batschelett, Armin Allahverdy, Brady J. Williamson, Mekibib Altaye, Beth Kline-Fath, Jean Tkach, Weihong Yuan, & Nehal A. Parikh
 
