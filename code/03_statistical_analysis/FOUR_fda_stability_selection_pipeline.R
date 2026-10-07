@@ -5,8 +5,8 @@
 #   exposures, residualized on forced covariates.
 #
 #   PURPOSE
-#     Identifies which of six candidate neonatal exposures (BPD, BWZ, GA, GBA,
-#     ROP, sepsis) carry independent explanatory information for a graph
+#     Identifies which of eight candidate neonatal exposures (BPD, BWZ, GA, GBA,
+#     ROP, sepsis, IVH, hydrocephalus) carry independent explanatory information for a graph
 #     theory metric in the VPT group. For stably-selected exposures, fits a
 #     full-sample PFFR refit with 1000-iteration bootstrap CIs on the
 #     functional beta coefficients.
@@ -16,8 +16,7 @@
 #         (clinical + GT metrics, 171 VPT only)
 #
 #   OUTPUTS  (per run, written to {output_dir})
-#     - {metric}_selection_matrix.{rds,csv}     100x6 binary selection matrix
-#                                                (consumed by Supp Note 7)
+#     - {metric}_selection_matrix.{rds,csv}     100x8 binary selection matrix
 #     - {metric}_stability_selection_summary.csv  Selection frequencies and
 #                                                 stable/unstable flags (Table 3)
 #     - {metric}_stability_selection_frequencies.png  Figures 3A / 4A / 5
@@ -43,7 +42,7 @@
 #     plus many hours for the full-sample 1000-iteration bootstrap if
 #     any exposure is stably selected. Total wall time for all 6 published
 #     runs (4 metrics + 2 ACC sensitivities) is on the order of days. 
-#     The saved RData files in results/fda_stability_selection/ are the 
+#     The saved RData files in results/stability_selection/ are the 
 #     recommended starting point for figure regeneration.
 #
 #   USAGE
@@ -57,17 +56,18 @@
 #       (with min 3 / max 10 PCs), inverse-variance PC weighting,
 #       square-root transform on GBA, alpha 0.001 in the full-sample
 #       refit.
-#     - Six candidate exposures: BPD (binary), BWZ (continuous), GA (continuous),
-#       GBA (continuous, sqrt-transformed), ROP (binary), sepsis (binary).
+#     - Eight candidate exposures: BPD (binary), BWZ (continuous), GA (continuous),
+#       GBA (continuous, sqrt-transformed), ROP (binary), sepsis (binary),
+#       IVH (binary), hydrocephalus (binary).
 #       DWMA was excluded prior to stability selection (Methods 2.7.4).
 #     - Forced covariates (entered unpenalized into every model in B, D):
 #       eTIV, sex, sriskscore, age_at_5y_mri, Rel_Motion.
 #     - For SW: pffr_family_final = scat() per Methods 2.7.3/2.7.4 (heavy-
 #       tailed residuals). All other metrics use gaussian().
-#     - Sensitivity branches for ACC (Supp Note 6, Supp Figs 15-16):
+#     - Sensitivity branches for ACC (Supp Note 6, Supp Figs 16-17):
 #         "main"          : analysis as published in Figure 3
 #         "high_gba_rem"  : exclude VPT participants with globalbrainscore2 > 14
-#                           (yields the 4 participants reported in Supp Fig 15)
+#                           (yields the 4 participants reported in Supp Fig 16)
 #         "gba_binary"    : replace globalbrainscore2 with globalcatmod
 #                           (>=8 vs <8) and skip the sqrt transform
 #       Branches are encoded by BATCH_sensitivity_branch.
@@ -105,8 +105,9 @@ if (exists("BATCH_MODE") && BATCH_MODE == TRUE) {
   
   metric              <- ""
   forced_covariates   <- c("eTIV", "sex", "sriskscore", "age_at_5y_mri", "Rel_Motion")
-  exposures           <- c("bpd2", "bw_z", "ga", "globalbrainscore2", "anyrop", "sepsis2")
-  categorical_exposures <- c("bpd2", "anyrop", "sepsis2")
+  exposures           <- c("bpd2", "bw_z_new", "ga", "globalbrainscore2", "anyrop", "sepsis2",
+                           "anyivh", "hydrocephalus_dc")
+  categorical_exposures <- c("bpd2", "anyrop", "sepsis2", "anyivh", "hydrocephalus_dc")
   categorical_forced    <- c("sex")
   
   density_min         <- 11
@@ -116,7 +117,8 @@ if (exists("BATCH_MODE") && BATCH_MODE == TRUE) {
   library(mgcv)
   pffr_family_final   <- gaussian()
   
-  # Metric-specific outlier IDs (Methods 2.7.2). Set per metric.
+  # Metric-specific outlier IDs (Methods 2.7.2): c(713, 659) for rand_norm_wei_GE;
+  # none for other metrics.
   subjects_to_exclude <- c()
   
   # Sensitivity branch: "main", "high_gba_rem", or "gba_binary"
@@ -156,22 +158,16 @@ if (exists("BATCH_MODE") && BATCH_MODE == TRUE) {
   cat(sprintf("Repo root: %s\n", repo_root))
 
   data_path       <- file.path(repo_root, "data/analysis_ready/cohort_171VPT_postVQC.xlsx")
-  output_dir_base <- file.path(repo_root, "results/fda_stability_selection")
+  output_dir_base <- file.path(repo_root, "results/stability_selection")
   
-  # Output directory follows the existing convention:
-  #   {metric}_stabsel_{dmin}-{dmax}/        for main analyses
-  #   ACC_sensitivity/{metric}_stabsel_{dmin}-{dmax}_{branch}/  for sensitivities
-  density_str <- sprintf("%.0f-%.0f", density_min, density_max)
+  # Output directory follows the layout of the saved results:
+  #   {metric folder}/                   for main analyses (strength, GE_norm, ACC_norm, SW)
+  #   ACC_sensitivity/{branch}/          for sensitivities
+  metric_folder <- ""
   if (sensitivity_branch == "main") {
-    output_dirname <- paste(metric, "stabsel", density_str, sep = "_")
-    output_dir <- file.path(output_dir_base, output_dirname)
+    output_dir <- file.path(output_dir_base, metric_folder)
   } else {
-    branch_suffix <- switch(sensitivity_branch,
-                            "high_gba_rem" = "high_gba_rem",
-                            "gba_binary"   = "gba_binary")
-    output_dirname <- paste(metric, "stabsel", density_str,
-                            branch_suffix, sep = "_")
-    output_dir <- file.path(output_dir_base, "ACC_sensitivity", output_dirname)
+    output_dir <- file.path(output_dir_base, "ACC_sensitivity", sensitivity_branch)
   }
 }
 
@@ -256,7 +252,7 @@ cat(sprintf("Loaded data: %d subjects x %d variables\n", nrow(df), ncol(df)))
 # --- A.1 Sensitivity branch transforms (applied BEFORE complete-case filter) ---
 
 if (sensitivity_branch == "high_gba_rem") {
-  # Supp Note 6 / Supp Fig 15 sensitivity. Filters by globalbrainscore2 > 14;
+  # Supp Note 6 / Supp Fig 16 sensitivity. Filters by globalbrainscore2 > 14;
   # in this cohort that yields the 4 participants reported in the manuscript.
   n_before <- nrow(df)
   df <- df[df$globalbrainscore2 <= 14 | is.na(df$globalbrainscore2), ]
@@ -264,7 +260,7 @@ if (sensitivity_branch == "high_gba_rem") {
   cat(sprintf("Sensitivity 'high_gba_rem': removed %d participant(s) with globalbrainscore2 > 14. N = %d\n",
               n_dropped, nrow(df)))
 } else if (sensitivity_branch == "gba_binary") {
-  # Supp Note 6 / Supp Fig 16 sensitivity. Replace continuous globalbrainscore2
+  # Supp Note 6 / Supp Fig 17 sensitivity. Replace continuous globalbrainscore2
   # with the binary globalcatmod (1 = score >= 8, 0 = score < 8). The runs
   # driver should set gbs2_transform = "none" for this branch since the variable
   # is already binary.
@@ -574,7 +570,7 @@ successful_mask <- split_status == "success"
 selection_freq  <- colMeans(selection_matrix[successful_mask, , drop = FALSE])
 names(selection_freq) <- exposures
 
-# --- Save selection matrix (consumed by Supp Note 7) ---
+# --- Save selection matrix ---
 sel_out <- selection_matrix[successful_mask, , drop = FALSE] * 1
 stopifnot(identical(colnames(sel_out), exposures))
 

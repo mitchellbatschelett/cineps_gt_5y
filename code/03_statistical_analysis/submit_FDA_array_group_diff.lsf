@@ -5,24 +5,24 @@
 #
 # PURPOSE
 #   Submits all 36 (metric x covariate configuration) FDA group difference
-#   runs as parallel array tasks. Each task runs TWO_fda_pipeline.R for one
+#   runs as parallel array tasks. Each task runs fda_pipeline.R for one
 #   cell of the run table defined in TWO_fda_group_difference_runs.R.
 #
 # RUN TABLE
 #   Index 1-6:   str                (gaussian)
 #   Index 7-12:  rand_norm_wei_GE   (gaussian)
 #   Index 13-18: rand_norm_wei_ACC  (gaussian)
-#   Index 19-24: rand_norm_wei_SW   (scat)    *** slowest; can exceed 1 week
-#   Index 25-30: GE  (raw)          (gaussian)
-#   Index 31-36: ACC (raw)          (gaussian)
+#   Index 19-24: GE  (raw)          (gaussian)
+#   Index 25-30: ACC (raw)          (gaussian)
+#   Index 31-36: rand_norm_wei_SW   (scat)    *** slowest; can exceed 1 week
 #
 # COMPUTATIONAL COST
 #   Gaussian runs: several hours each on the configuration below.
-#   Scat-SW runs (19-24): up to or more than a week each on the configuration below.
+#   Scat-SW runs (31-36): up to or more than a week each on the configuration below.
 #   The 250-hour wall-time below is sufficient for gaussian runs but NOT for
 #   scat-SW runs. Submit scat-SW runs separately with extended wall time,
-#   e.g. by editing -J to "FDA_GRP[19-24]" and -W to a permitted maximum,
-#   then resubmitting indices 1-18 and 25-36 under the default wall time.
+#   e.g. by editing -J to "FDA_GRP[31-36]" and -W to a permitted maximum,
+#   then resubmitting indices 1-30 under the default wall time.
 #
 # USAGE
 #   bsub < submit_FDA_array_group_diff.lsf

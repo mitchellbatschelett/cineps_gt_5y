@@ -1,50 +1,35 @@
 ################################################################################
 #
-#   FDA UNIVARIATE RUN TABLE
+#   THREE_fda_univariate_runs.R  -  within-VPT univariate exposure models
 #
-#   PURPOSE
-#     Driver for THREE_fda_univariate_pipeline.R. Defines the 28 (exposure,
-#     metric) cells of the fully-adjusted univariate grid reported in
-#     Methods 2.7.4, Supp Note 5, Supp Table 6, and Supp Figs 11-14.
+#   37 runs, VPT only (N = 171), each fit by fda_pipeline.R
+#     model: metric(d) ~ exposure + eTIV + sex + sriskscore + age_at_5y_mri + Rel_Motion
+#     metrics: strength, normalized GE, normalized ACC, SW
+#     exposures: bpd2, bw_z_new, ga, globalbrainscore2 (sqrt), anyrop, sepsis2, dwma_percent,
+#                anyivh, hydrocephalus_dc
+#     family: gaussian() for ALL metrics, including SW
+#     z-scored: every continuous predictor (continuous exposures + eTIV, sriskscore,
+#               age_at_5y_mri, Rel_Motion); not scaled: sex, bpd2, anyrop, sepsis2,
+#               anyivh, hydrocephalus_dc
+#     metric-specific exclusions: rand_norm_wei_GE c(713, 659); none for other metrics
 #
-#   RUN TABLE (28 runs = 7 exposures x 4 primary metrics)
-#     Exposures (7): bpd2, bw_z, ga, globalbrainscore2 (sqrt-transformed),
-#                    anyrop, sepsis2, dwma_percent
-#     Metrics (4):   str, rand_norm_wei_GE, rand_norm_wei_ACC, rand_norm_wei_SW
-#     Family:        gaussian for all 28 (per Methods 2.7.4 SW caveat)
-#     Forced covariates: eTIV, sex, sriskscore, age_at_5y_mri, Rel_Motion
+#   INDEX TABLE
+#     1-28:  1-7 strength | 8-14 GE_norm | 15-21 ACC_norm | 22-28 SW
+#            within each block of 7: BPD, BWZ, GA, GBA, ROP, Sepsis, DWMA
+#     29:    Supplementary Note 6 sensitivity: ACC ~ GBA with the four high-GBA
+#            participants (GBA > 14) removed
+#     30-37: 30-31 strength | 32-33 GE_norm | 34-35 ACC_norm | 36-37 SW
+#            within each block of 2: IVH, Hydrocephalus
 #
 #   USAGE
-#     Rscript THREE_fda_univariate_runs.R <run_index>
-#     where run_index is 1..28. Use submit_FDA_array_univariate.lsf to
-#     submit the full set as an LSF array job.
+#     Rscript THREE_fda_univariate_runs.R --list     # write/print the index table, run nothing
+#     Rscript THREE_fda_univariate_runs.R <index>    # run one model (called by the .lsf)
 #
-#   COMPUTATIONAL COST
-#     See header of THREE_fda_univariate_pipeline.R. Roughly 1-6 hours per
-#     cell on a 24-core HPC node including the 1000-iteration bootstrap.
+#   OUTPUT
+#     results/univariate/{metric_folder}/{exposure_folder}/
+#     results/univariate_sensitivity/ACC_norm/GBA_high_gba_rem/   (run 29)
 #
 ################################################################################
-
-# ==============================================================================
-# COMMAND-LINE INDEX
-# ==============================================================================
-
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args) == 0) {
-  stop("Usage: Rscript THREE_fda_univariate_runs.R <run_index>\n",
-       "  e.g., Rscript THREE_fda_univariate_runs.R 1")
-}
-run_index <- as.integer(args[1])
-
-cat(sprintf("FDA Univariate Run - Index: %d\n", run_index))
-cat(sprintf("Timestamp: %s\n", Sys.time()))
-cat(sprintf("Node:      %s\n\n", Sys.info()["nodename"]))
-
-library(mgcv)
-
-# ==============================================================================
-# PATHS
-# ==============================================================================
 
 # Repo root is located automatically so a fresh clone runs without edits.
 # Order: (0) honor a `repo_root` already set in the global env; (1) derive this
@@ -85,146 +70,125 @@ if (exists("repo_root", inherits = TRUE) && is.character(repo_root) &&
 }
 cat(sprintf("Repo root: %s\n", repo_root))
 
-pipeline_script <- file.path(repo_root, "code/03_statistical_analysis/THREE_fda_univariate_pipeline.R")
-output_dir_base <- file.path(repo_root, "results/fda_univariate")
-data_path       <- file.path(repo_root, "data/analysis_ready/cohort_171VPT_postVQC.xlsx")
-# --- Cores: pick ONE line below (comment out the other) ---
-# n_cores <- 24                                   # fixed count (e.g. cluster node)
-n_cores <- max(1, parallel::detectCores() - 1)    # auto-detect (laptop-safe default)
+DATA_PATH    <- file.path(repo_root, "data/analysis_ready/cohort_171VPT_postVQC.xlsx")
+RESULTS_BASE <- file.path(repo_root, "results")
+# Test overrides (leave unset for the real runs):
+#   FDA_RESULTS_BASE=/some/other/folder  -> write somewhere else
+#   FDA_N_BOOT=20                        -> fewer bootstrap iterations
+if (nzchar(Sys.getenv("FDA_RESULTS_BASE"))) RESULTS_BASE <- Sys.getenv("FDA_RESULTS_BASE")
+N_BOOT <- as.integer(Sys.getenv("FDA_N_BOOT", "1000"))
+PIPELINE_SCRIPT <- file.path(repo_root, "code/03_statistical_analysis/fda_pipeline.R")
 
-# ==============================================================================
-# SHARED PARAMETERS
-# ==============================================================================
+library(mgcv)
 
-forced_covariates_default <- c("eTIV", "sex", "sriskscore",
-                               "age_at_5y_mri", "Rel_Motion")
-
-# Binary/categorical variables that should NOT be z-scored. Everything
-# else (continuous exposures of interest AND continuous forced covariates:
-# eTIV, sriskscore, age_at_5y_mri, Rel_Motion) gets z-scored in the pipeline.
-binary_vars <- c("sex", "bpd2", "anyrop", "sepsis2")
-
-# Metric-specific outliers (Methods 2.7.2)
-metric_outliers <- list(
-  "str"               = c(128, 713),
-  "rand_norm_wei_GE"  = c(659),
-  "rand_norm_wei_ACC" = c(),
-  "rand_norm_wei_SW"  = c(309, 321, 8155)
+metrics <- list(
+  list(folder = "strength", prefix = "str",               label = "Strength"),
+  list(folder = "GE_norm",  prefix = "rand_norm_wei_GE",  label = "Normalized GE"),
+  list(folder = "ACC_norm", prefix = "rand_norm_wei_ACC", label = "Normalized ACC"),
+  list(folder = "SW",       prefix = "rand_norm_wei_SW",  label = "Small-worldness")
 )
 
-# ==============================================================================
-# EXPOSURE AND METRIC LISTS
-# ==============================================================================
-
-# Order here defines exposure ordering in the run table. 7 candidate
-# neonatal exposures (Methods 2.7.4).
-exposure_specs <- list(
-  list(name = "bpd2",              label = "BPD",    is_binary = TRUE,  needs_gba_sqrt = FALSE),
-  list(name = "bw_z",              label = "BWZ",    is_binary = FALSE, needs_gba_sqrt = FALSE),
-  list(name = "ga",                label = "GA",     is_binary = FALSE, needs_gba_sqrt = FALSE),
-  list(name = "globalbrainscore2", label = "GBA",    is_binary = FALSE, needs_gba_sqrt = TRUE),
-  list(name = "anyrop",            label = "ROP",    is_binary = TRUE,  needs_gba_sqrt = FALSE),
-  list(name = "sepsis2",           label = "Sepsis", is_binary = TRUE,  needs_gba_sqrt = FALSE),
-  list(name = "dwma_percent",      label = "DWMA",   is_binary = FALSE, needs_gba_sqrt = FALSE)
+exposures <- list(
+  list(folder = "BPD",    var = "bpd2",              label = "BPD"),
+  list(folder = "BWZ",    var = "bw_z_new",              label = "Birth weight z-score"),
+  list(folder = "GA",     var = "ga",                label = "Gestational age"),
+  list(folder = "GBA",    var = "globalbrainscore2", label = "GBA (sqrt)"),
+  list(folder = "ROP",    var = "anyrop",            label = "ROP"),
+  list(folder = "Sepsis", var = "sepsis2",           label = "Sepsis"),
+  list(folder = "DWMA",   var = "dwma_percent",      label = "DWMA (%)")
 )
 
-# Order here defines metric ordering in the run table. 4 primary metrics.
-metric_specs <- list(
-  list(metric = "str"),
-  list(metric = "rand_norm_wei_GE"),
-  list(metric = "rand_norm_wei_ACC"),
-  list(metric = "rand_norm_wei_SW")
+# cranial ultrasound exposures (runs 30-37)
+exposures_cus <- list(
+  list(folder = "IVH",           var = "anyivh",           label = "Any IVH"),
+  list(folder = "Hydrocephalus", var = "hydrocephalus_dc", label = "Hydrocephalus")
 )
 
-# ==============================================================================
-# BUILD RUN TABLE
-# ==============================================================================
+binary_vars <- c("sex", "bpd2", "anyrop", "sepsis2", "anyivh", "hydrocephalus_dc")
 
-# Order: outer loop = metric, inner loop = exposure
-# So indices 1-7 = strength x (7 exposures), 8-14 = norm GE x (7 exposures), etc.
-# This groups runs by metric, which matches the by-outcome output organization.
+# metric-specific exclusions
+exclusions <- list(str = c(), rand_norm_wei_GE = c(713, 659), rand_norm_wei_ACC = c(), rand_norm_wei_SW = c())
+
+predictor_labels <- c(eTIV = "eTIV", sex = "Sex", sriskscore = "Social risk score", age_at_5y_mri = "Age at MRI",
+                      Rel_Motion = "Motion (eddy relative RMS)",
+                      setNames(sapply(c(exposures, exposures_cus), `[[`, "label"),
+                               sapply(c(exposures, exposures_cus), `[[`, "var")))
+
+# ------------------------------------------------------------------ build runs
+forced <- c("eTIV", "sex", "sriskscore", "age_at_5y_mri", "Rel_Motion")
+make_run <- function(m, ex) {
+  preds <- c(ex$var, forced)
+  list(
+    pipeline = "repol", metric = m$prefix, metric_folder = m$folder, metric_label = m$label,
+    exposure_folder = ex$folder, exposure = ex$var, exposure_label = ex$label,
+    predictors = preds, skip_scaling = intersect(preds, binary_vars),
+    exclude = exclusions[[m$prefix]],
+    data_path = DATA_PATH,
+    output_dir = file.path(RESULTS_BASE, "univariate", m$folder, ex$folder))
+}
 runs <- list()
-for (m in metric_specs) {
-  for (e in exposure_specs) {
-    # Skip scaling for binary/categorical variables only. All continuous
-    # predictors (exposures of interest AND forced covariates) get z-scored.
-    skip_set <- binary_vars
-    if (e$is_binary) skip_set <- unique(c(skip_set, e$name))
-    
-    runs[[length(runs) + 1]] <- list(
-      metric                = m$metric,
-      exposure              = e$name,
-      forced_covariates     = forced_covariates_default,
-      vars_to_skip_scaling  = skip_set,
-      subjects_to_exclude   = metric_outliers[[m$metric]],
-      pffr_family           = gaussian(),
-      apply_gba_sqrt        = e$needs_gba_sqrt,
-      density_min           = 11,
-      density_max           = 100,
-      n_bootstrap           = 1000,
-      pffr_k_basis          = 20,
-      p_threshold           = 0.001
-    )
-  }
-}
-stopifnot(length(runs) == 28)
+for (m in metrics) for (ex in exposures) runs[[length(runs) + 1]] <- make_run(m, ex)
+# Supp Note 6: ACC ~ GBA with the four high-GBA participants (GBA > 14) removed
+runs[[29]] <- runs[[18]]
+runs[[29]]$exclude <- c(354, 559, 332, 650)
+runs[[29]]$output_dir <- file.path(RESULTS_BASE, "univariate_sensitivity", "ACC_norm", "GBA_high_gba_rem")
+# cranial ultrasound exposures
+for (m in metrics) for (ex in exposures_cus) runs[[length(runs) + 1]] <- make_run(m, ex)
+stopifnot(length(runs) == 37)
 
-# ==============================================================================
-# VALIDATE INDEX
-# ==============================================================================
+index_table <- do.call(rbind, lapply(seq_along(runs), function(i) {
+  r <- runs[[i]]
+  data.frame(index = i, pipeline = r$pipeline, metric_folder = r$metric_folder, metric = r$metric,
+             family = "gaussian", exposure = r$exposure_folder, predictors = paste(r$predictors, collapse = " + "),
+             output_dir = r$output_dir, stringsAsFactors = FALSE)
+}))
 
-if (run_index < 1 || run_index > length(runs)) {
-  stop(sprintf("Run index %d is out of range. Valid range: 1-%d",
-               run_index, length(runs)))
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) == 0) stop("Usage: Rscript THREE_fda_univariate_runs.R <index 1-37> | --list")
+
+if (args[1] == "--list") {
+  f <- file.path(RESULTS_BASE, "univariate", "run_index_univariate.csv")
+  dir.create(dirname(f), recursive = TRUE, showWarnings = FALSE)
+  write.csv(index_table, f, row.names = FALSE)
+  print(index_table[, c("index", "pipeline", "metric_folder", "family", "exposure", "predictors")], row.names = FALSE)
+  cat(sprintf("\nWrote %s\n", f))
+  quit(status = 0)
 }
 
-run <- runs[[run_index]]
+run_index <- as.integer(args[1])
+if (is.na(run_index) || run_index < 1 || run_index > length(runs))
+  stop(sprintf("Index %s out of range 1-%d", args[1], length(runs)))
+r <- runs[[run_index]]
 
-# ==============================================================================
-# BUILD OUTPUT DIRECTORY NAME
-# ==============================================================================
-
-# Grouped by outcome metric:
-#   results/fda_univariate/{metric}/{metric}_univariate_{exposure}_11-100/
-density_str    <- sprintf("%.0f-%.0f", run$density_min, run$density_max)
-output_dirname <- paste(run$metric, "univariate", run$exposure,
-                        density_str, sep = "_")
-output_dir     <- file.path(output_dir_base, run$metric, output_dirname)
-
-cat(sprintf("Metric:     %s\n", run$metric))
-cat(sprintf("Exposure:   %s\n", run$exposure))
-cat(sprintf("Outliers:   %s\n",
-            if (length(run$subjects_to_exclude) > 0)
-              paste(run$subjects_to_exclude, collapse = ", ") else "none"))
-cat(sprintf("Output:     %s\n\n", output_dir))
-
-# ==============================================================================
-# SET BATCH VARIABLES AND SOURCE THE PIPELINE
-# ==============================================================================
+cat(sprintf("FDA univariate - index %d / %d\n", run_index, length(runs)))
+cat(sprintf("Started %s on %s\n", format(Sys.time()), Sys.info()[["nodename"]]))
+if (!file.exists(r$data_path)) stop("Data file not found: ", r$data_path)
 
 BATCH_MODE                 <<- TRUE
-BATCH_metric               <<- run$metric
-BATCH_exposure             <<- run$exposure
-BATCH_forced_covariates    <<- run$forced_covariates
-BATCH_vars_to_skip_scaling <<- run$vars_to_skip_scaling
-BATCH_density_min          <<- run$density_min
-BATCH_density_max          <<- run$density_max
-BATCH_n_bootstrap          <<- run$n_bootstrap
-BATCH_p_threshold          <<- run$p_threshold
-BATCH_pffr_k_basis         <<- run$pffr_k_basis
-BATCH_pffr_family          <<- run$pffr_family
-BATCH_subjects_to_exclude  <<- run$subjects_to_exclude
-BATCH_apply_gba_sqrt       <<- run$apply_gba_sqrt
-BATCH_output_dir           <<- output_dir
-BATCH_data_path            <<- data_path
-BATCH_n_cores              <<- n_cores
+BATCH_metric               <<- r$metric
+BATCH_all_predictors       <<- r$predictors
+BATCH_vars_to_skip_scaling <<- r$skip_scaling
+BATCH_density_min          <<- 11
+BATCH_density_max          <<- 100
+BATCH_n_bootstrap          <<- N_BOOT
+BATCH_p_threshold          <<- 0.001
+BATCH_pffr_k_basis         <<- 20
+BATCH_pffr_family          <<- gaussian()      # gaussian for all univariate models, including SW
+BATCH_subjects_to_exclude  <<- r$exclude
+BATCH_apply_gba_sqrt       <<- TRUE            # only acts when globalbrainscore2 is a predictor
+BATCH_outlier_percentile   <<- 0.05
+BATCH_output_dir           <<- r$output_dir
+BATCH_data_path            <<- r$data_path
+BATCH_predictor_labels     <<- predictor_labels
+BATCH_run_meta             <<- list(index = run_index, pipeline = r$pipeline, analysis = "univariate",
+                                    metric_label = r$metric_label,
+                                    model_label = sprintf("Exposure: %s (fully adjusted)", r$exposure_label))
 
 tryCatch({
-  source(pipeline_script)
-  cat("\n\n=== RUN COMPLETED SUCCESSFULLY ===\n")
+  source(PIPELINE_SCRIPT)
+  cat("\n=== RUN COMPLETED SUCCESSFULLY ===\n")
 }, error = function(e) {
-  cat(sprintf("\n\n!!! RUN FAILED: %s\n", e$message))
+  cat(sprintf("\n!!! RUN FAILED: %s\n", conditionMessage(e)))
   quit(status = 1)
 })
-
-cat(sprintf("Finished: %s\n", Sys.time()))
+cat(sprintf("Finished %s\n", format(Sys.time())))

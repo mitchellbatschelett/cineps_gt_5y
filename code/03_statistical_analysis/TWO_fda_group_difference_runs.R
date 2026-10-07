@@ -1,68 +1,26 @@
 ################################################################################
 #
-#   FDA GROUP DIFFERENCE RUN TABLE
+#   TWO_fda_group_difference_runs.R  -  VPT vs FT group-difference models
 #
-#   PURPOSE
-#     Driver for TWO_fda_pipeline.R. Defines the 36 (metric x covariate
-#     configuration) cells reported in the manuscript and supplement, sets
-#     BATCH_* variables for one run selected by a command-line index, and
-#     sources the pipeline.
+#   36 runs = 6 metrics x 6 covariate configurations, each fit by fda_pipeline.R
+#     configurations: 1 unadjusted, 2 +age, 3 +eTIV, 4 +sex, 5 +motion, 6 fully adjusted
+#     family: scat() for SW, gaussian() for every other metric
+#     motion covariate: Rel_Motion (eddy relative RMS)
+#     z-scored: age_at_5y_mri, eTIV, Rel_Motion; not scaled: Group, sex
+#     metric-specific exclusions: rand_norm_wei_GE c(713, 659); none for other metrics
 #
-#   RUN TABLE (36 runs = 6 metrics x 6 covariate configurations)
-#     Metrics (6):    str, rand_norm_wei_GE, rand_norm_wei_ACC,
-#                     rand_norm_wei_SW, GE (raw), ACC (raw)
-#     Configurations (6):
-#       1. Group                                                  [unadjusted]
-#       2. Group + age_at_5y_mri
-#       3. Group + eTIV
-#       4. Group + sex
-#       5. Group + Rel_Motion
-#       6. Group + age_at_5y_mri + eTIV + sex + Rel_Motion        [fully adjusted]
-#
-#     Family: gaussian() for all metrics except rand_norm_wei_SW, which uses
-#     scat() per Methods 2.7.3.
-#
-#     Metric-specific outlier exclusions (Methods 2.7.2):
-#       str:               c(128, 713)
-#       rand_norm_wei_GE:  c(659)
-#       rand_norm_wei_ACC: c()
-#       rand_norm_wei_SW:  c(309, 321, 8155)
-#       GE  (raw):         c(128, 713)
-#       ACC (raw):         c(128, 713)
+#   INDEX TABLE (SW last)
+#     1-6 strength | 7-12 GE_norm | 13-18 ACC_norm | 19-24 GE_raw | 25-30 ACC_raw | 31-36 SW (scat)
+#     within each block of 6: 1 unadjusted, 2 adj_age, 3 adj_eTIV, 4 adj_sex, 5 adj_motion, 6 fully_adjusted
 #
 #   USAGE
-#     Rscript TWO_fda_group_difference_runs.R <run_index>
-#     where run_index is 1..36. Use submit_FDA_array_group_diff.lsf to submit
-#     the full set as an LSF array job, if using HPC cluster. To run interactively, 
-#     set run_index manually and source this file.
+#     Rscript TWO_fda_group_difference_runs.R --list      # write/print the index table, run nothing
+#     Rscript TWO_fda_group_difference_runs.R <index>     # run one model (called by the .lsf)
 #
-#   COMPUTATIONAL COST
-#     See header of TWO_fda_pipeline.R. Hours per gaussian run; much longer
-#     per scat-SW run (runs 19-24).
+#   OUTPUT
+#     results/group_differences/{metric_folder}/{config_folder}/
 #
 ################################################################################
-
-# ==============================================================================
-# COMMAND-LINE INDEX
-# ==============================================================================
-
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args) == 0) {
-  stop("Usage: Rscript TWO_fda_group_difference_runs.R <run_index>\n",
-       "  e.g., Rscript TWO_fda_group_difference_runs.R 1")
-}
-run_index <- as.integer(args[1])
-
-cat(sprintf("FDA Group Difference Run - Index: %d\n", run_index))
-cat(sprintf("Timestamp: %s\n", Sys.time()))
-cat(sprintf("Node:      %s\n\n", Sys.info()["nodename"]))
-
-# mgcv must be loaded so that scat() resolves before being placed into the runs list
-library(mgcv)
-
-# ==============================================================================
-# PATHS - cluster defaults; uncomment LOCAL OVERRIDE block for laptop use
-# ==============================================================================
 
 # Repo root is located automatically so a fresh clone runs without edits.
 # Order: (0) honor a `repo_root` already set in the global env; (1) derive this
@@ -103,141 +61,110 @@ if (exists("repo_root", inherits = TRUE) && is.character(repo_root) &&
 }
 cat(sprintf("Repo root: %s\n", repo_root))
 
-pipeline_script <- file.path(repo_root, "code/03_statistical_analysis/TWO_fda_pipeline.R")
-output_dir_base <- file.path(repo_root, "results/fda_group_differences")
-data_path       <- file.path(repo_root, "data/analysis_ready/cohort_171VPT_45FT_postVQC.xlsx")
-# --- Cores: pick ONE line below (comment out the other) ---
-# n_cores <- 24                                   # fixed count (e.g. cluster node)
-n_cores <- max(1, parallel::detectCores() - 1)    # auto-detect (laptop-safe default)
+DATA_PATH    <- file.path(repo_root, "data/analysis_ready/cohort_171VPT_45FT_postVQC.xlsx")
+RESULTS_BASE <- file.path(repo_root, "results/group_differences")
+# Test overrides (leave unset for the real runs):
+#   FDA_RESULTS_BASE=/some/other/folder  -> write somewhere else
+#   FDA_N_BOOT=20                        -> fewer bootstrap iterations
+if (nzchar(Sys.getenv("FDA_RESULTS_BASE"))) RESULTS_BASE <- Sys.getenv("FDA_RESULTS_BASE")
+N_BOOT <- as.integer(Sys.getenv("FDA_N_BOOT", "1000"))
+PIPELINE_SCRIPT <- file.path(repo_root, "code/03_statistical_analysis/fda_pipeline.R")
 
-# ==============================================================================
-# METRIC SPECIFICATIONS
-# ==============================================================================
+library(mgcv)   # so scat() / gaussian() resolve in the run list
 
-# Order here defines the metric ordering in the run table (rows 1-6 are
-# the first metric across all 6 configs, rows 7-12 are the second, etc.).
-# Methods 2.7.2 outlier exclusions are hardcoded per metric here so the runs
-# list below doesn't need to repeat them.
-metric_specs <- list(
-  list(metric = "str",
-       family = gaussian(),
-       exclude = c(128, 713)),
-  list(metric = "rand_norm_wei_GE",
-       family = gaussian(),
-       exclude = c(659)),
-  list(metric = "rand_norm_wei_ACC",
-       family = gaussian(),
-       exclude = c()),
-  list(metric = "rand_norm_wei_SW",
-       family = scat(),
-       exclude = c(309, 321, 8155)),
-  list(metric = "GE",
-       family = gaussian(),
-       exclude = c(128, 713)),
-  list(metric = "ACC",
-       family = gaussian(),
-       exclude = c(128, 713))
+# metric folder, column prefix, label, family; SW last
+metrics <- list(
+  list(folder = "strength", prefix = "str",               label = "Strength",           family = "gaussian"),
+  list(folder = "GE_norm",  prefix = "rand_norm_wei_GE",  label = "Normalized GE",      family = "gaussian"),
+  list(folder = "ACC_norm", prefix = "rand_norm_wei_ACC", label = "Normalized ACC",     family = "gaussian"),
+  list(folder = "GE_raw",   prefix = "GE",                label = "Raw GE",             family = "gaussian"),
+  list(folder = "ACC_raw",  prefix = "ACC",               label = "Raw ACC",            family = "gaussian"),
+  list(folder = "SW",       prefix = "rand_norm_wei_SW",  label = "Small-worldness",    family = "scat")
 )
 
-# ==============================================================================
-# COVARIATE CONFIGURATIONS
-# ==============================================================================
-
-# Order here defines covariate-config ordering within each metric block.
-# vars_to_skip_scaling encodes "do not z-score before fitting".
-covar_configs <- list(
-  list(predictors = c("Group"),
-       skip_scaling = c("Group")),
-  list(predictors = c("Group", "age_at_5y_mri"),
-       skip_scaling = c("Group")),
-  list(predictors = c("Group", "eTIV"),
-       skip_scaling = c("Group")),
-  list(predictors = c("Group", "sex"),
-       skip_scaling = c("Group", "sex")),
-  list(predictors = c("Group", "Rel_Motion"),
-       skip_scaling = c("Group")),
-  list(predictors = c("Group", "age_at_5y_mri", "eTIV", "sex", "Rel_Motion"),
-       skip_scaling = c("Group", "sex"))
+# covariate configurations
+configs <- list(
+  list(folder = "1_unadjusted",     label = "Unadjusted",         covs = c()),
+  list(folder = "2_adj_age",        label = "Adjusted: age",      covs = c("age_at_5y_mri")),
+  list(folder = "3_adj_eTIV",       label = "Adjusted: eTIV",     covs = c("eTIV")),
+  list(folder = "4_adj_sex",        label = "Adjusted: sex",      covs = c("sex")),
+  list(folder = "5_adj_motion",     label = "Adjusted: motion",   covs = c("Rel_Motion")),
+  list(folder = "6_fully_adjusted", label = "Fully adjusted",     covs = c("age_at_5y_mri", "eTIV", "sex", "Rel_Motion"))
 )
 
-# ==============================================================================
-# BUILD RUN TABLE (cross metric_specs x covar_configs)
-# ==============================================================================
+# metric-specific exclusions
+exclusions <- list(str = c(), rand_norm_wei_GE = c(713, 659), rand_norm_wei_ACC = c(),
+                   rand_norm_wei_SW = c(), GE = c(), ACC = c())
 
+predictor_labels <- c(Group = "Group (VPT vs FT)", age_at_5y_mri = "Age at MRI", eTIV = "eTIV", sex = "Sex",
+                      Rel_Motion = "Motion (eddy relative RMS)")
+
+# ------------------------------------------------------------------ build runs
 runs <- list()
-for (m in metric_specs) {
-  for (c in covar_configs) {
-    runs[[length(runs) + 1]] <- list(
-      metric               = m$metric,
-      pffr_family          = m$family,
-      subjects_to_exclude  = m$exclude,
-      predictors           = c$predictors,
-      vars_to_skip_scaling = c$skip_scaling,
-      density_min          = 11,
-      density_max          = 100,
-      n_bootstrap          = 1000,
-      pffr_k_basis         = 20,
-      p_threshold          = 0.001
-    )
-  }
+for (m in metrics) for (cf in configs) {
+  preds <- c("Group", cf$covs)
+  runs[[length(runs) + 1]] <- list(
+    pipeline = "repol", metric = m$prefix, metric_folder = m$folder, metric_label = m$label,
+    family = m$family, config_folder = cf$folder, config_label = cf$label,
+    predictors = preds, skip_scaling = intersect(preds, c("Group", "sex")),
+    exclude = exclusions[[m$prefix]],
+    data_path = DATA_PATH,
+    output_dir = file.path(RESULTS_BASE, m$folder, cf$folder))
 }
 stopifnot(length(runs) == 36)
 
-# ==============================================================================
-# VALIDATE INDEX
-# ==============================================================================
+index_table <- do.call(rbind, lapply(seq_along(runs), function(i) {
+  r <- runs[[i]]
+  data.frame(index = i, pipeline = r$pipeline, metric_folder = r$metric_folder, metric = r$metric,
+             family = r$family, model = r$config_folder, predictors = paste(r$predictors, collapse = " + "),
+             output_dir = r$output_dir, stringsAsFactors = FALSE)
+}))
 
-if (run_index < 1 || run_index > length(runs)) {
-  stop(sprintf("Run index %d is out of range. Valid range: 1-%d",
-               run_index, length(runs)))
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) == 0) stop("Usage: Rscript TWO_fda_group_difference_runs.R <index 1-36> | --list")
+
+if (args[1] == "--list") {
+  dir.create(RESULTS_BASE, recursive = TRUE, showWarnings = FALSE)
+  f <- file.path(RESULTS_BASE, "run_index_group_differences.csv")
+  write.csv(index_table, f, row.names = FALSE)
+  print(index_table[, c("index", "pipeline", "metric_folder", "family", "model", "predictors")], row.names = FALSE)
+  cat(sprintf("\nWrote %s\n", f))
+  quit(status = 0)
 }
 
-run <- runs[[run_index]]
+run_index <- as.integer(args[1])
+if (is.na(run_index) || run_index < 1 || run_index > length(runs))
+  stop(sprintf("Index %s out of range 1-%d", args[1], length(runs)))
+r <- runs[[run_index]]
 
-# ==============================================================================
-# BUILD OUTPUT DIRECTORY NAME
-# ==============================================================================
-
-# Convention: {metric}_FDA_{predictors_underscored}_{dmin}-{dmax}_fullsample
-# (preserved from the upstream pipeline so downstream figure scripts find it)
-pred_str       <- paste(run$predictors, collapse = "_")
-density_str    <- sprintf("%.0f-%.0f", run$density_min, run$density_max)
-output_dirname <- paste(run$metric, "FDA", pred_str, density_str,
-                        "fullsample", sep = "_")
-
-cat(sprintf("Metric:     %s\n", run$metric))
-cat(sprintf("Family:     %s\n", run$pffr_family$family))
-cat(sprintf("Predictors: %s\n", paste(run$predictors, collapse = ", ")))
-cat(sprintf("Outliers:   %s\n",
-            if (length(run$subjects_to_exclude) > 0)
-              paste(run$subjects_to_exclude, collapse = ", ") else "none"))
-cat(sprintf("Output:     %s\n\n", output_dirname))
-
-# ==============================================================================
-# SET BATCH VARIABLES AND SOURCE THE PIPELINE
-# ==============================================================================
+cat(sprintf("FDA group differences - index %d / %d\n", run_index, length(runs)))
+cat(sprintf("Started %s on %s\n", format(Sys.time()), Sys.info()[["nodename"]]))
+if (!file.exists(r$data_path)) stop("Data file not found: ", r$data_path)
 
 BATCH_MODE                 <<- TRUE
-BATCH_metric               <<- run$metric
-BATCH_all_predictors       <<- run$predictors
-BATCH_vars_to_skip_scaling <<- run$vars_to_skip_scaling
-BATCH_density_min          <<- run$density_min
-BATCH_density_max          <<- run$density_max
-BATCH_n_bootstrap          <<- run$n_bootstrap
-BATCH_p_threshold          <<- run$p_threshold
-BATCH_pffr_k_basis         <<- run$pffr_k_basis
-BATCH_pffr_family          <<- run$pffr_family
-BATCH_subjects_to_exclude  <<- run$subjects_to_exclude
-BATCH_output_dir           <<- file.path(output_dir_base, output_dirname)
-BATCH_data_path            <<- data_path
-BATCH_n_cores              <<- n_cores
+BATCH_metric               <<- r$metric
+BATCH_all_predictors       <<- r$predictors
+BATCH_vars_to_skip_scaling <<- r$skip_scaling
+BATCH_density_min          <<- 11
+BATCH_density_max          <<- 100
+BATCH_n_bootstrap          <<- N_BOOT
+BATCH_p_threshold          <<- 0.001
+BATCH_pffr_k_basis         <<- 20
+BATCH_pffr_family          <<- if (r$family == "scat") scat() else gaussian()
+BATCH_subjects_to_exclude  <<- r$exclude
+BATCH_apply_gba_sqrt       <<- FALSE
+BATCH_outlier_percentile   <<- 0.05
+BATCH_output_dir           <<- r$output_dir
+BATCH_data_path            <<- r$data_path
+BATCH_predictor_labels     <<- predictor_labels
+BATCH_run_meta             <<- list(index = run_index, pipeline = r$pipeline, analysis = "group_differences",
+                                    metric_label = r$metric_label, model_label = r$config_label)
 
 tryCatch({
-  source(pipeline_script)
-  cat("\n\n=== RUN COMPLETED SUCCESSFULLY ===\n")
+  source(PIPELINE_SCRIPT)
+  cat("\n=== RUN COMPLETED SUCCESSFULLY ===\n")
 }, error = function(e) {
-  cat(sprintf("\n\n!!! RUN FAILED: %s\n", e$message))
+  cat(sprintf("\n!!! RUN FAILED: %s\n", conditionMessage(e)))
   quit(status = 1)
 })
-
-cat(sprintf("Finished: %s\n", Sys.time()))
+cat(sprintf("Finished %s\n", format(Sys.time())))
