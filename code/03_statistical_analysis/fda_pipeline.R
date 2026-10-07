@@ -23,8 +23,7 @@
 #     beta_plots/    beta_<term>.png for every term, all_terms.png
 #     tables/        beta_curves.csv, beta_significance.csv, predictor_tests.csv,
 #                    summary.csv, outliers_flagged.csv
-#     exploratory/   raw_curves.png, mean_sd.png, functional_boxplot.png,
-#                    fpca_eigenfunctions.png
+#     exploratory/   raw_curves.png, mean_sd.png, functional_boxplot.png
 #     diagnostics/   pffr_diagnostics.png, residuals.png, R2_by_density.png,
 #                    pffr_coefficients.png
 #     model/         FDA_results.RData
@@ -243,24 +242,6 @@ try({
   cat("  functional_boxplot.png\n")
 })
 if (dev.cur() > 1) dev.off()
-
-fpca_result <- NULL
-try({
-  fpca_result <- fpca.sc(Y = Y_clean, argvals = densities, pve = 0.99, npc = 10, var = TRUE)
-  pve <- fpca_result$evalues / sum(fpca_result$evalues) * 100
-  for (k in 1:min(5, fpca_result$npc)) cat(sprintf("  FPC%d: %.1f%% (cumulative %.1f%%)\n", k, pve[k], cumsum(pve)[k]))
-  nk <- min(3, fpca_result$npc)
-  ef <- data.frame(density = densities, fpca_result$efunctions[, 1:nk, drop = FALSE])
-  names(ef)[-1] <- paste0("PC", 1:nk)
-  ef <- pivot_longer(ef, -density, names_to = "Component", values_to = "Loading")
-  p3 <- ggplot(ef, aes(density, Loading, color = Component)) + geom_line(linewidth = 1) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") + scale_color_viridis_d() +
-    labs(x = "Network Density (%)", y = "Eigenfunction value",
-         title = sprintf("FPCA eigenfunctions: %s", run_meta$metric_label), subtitle = title_tag) +
-    theme_minimal() + theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-  ggsave(out("exploratory", "fpca_eigenfunctions.png"), p3, width = 10, height = 6, dpi = 300)
-  cat("  fpca_eigenfunctions.png\n")
-})
 
 # ==============================================================================
 # SECTION 4: PFFR MODEL
@@ -488,7 +469,7 @@ write.csv(summary_results, out("tables", "summary.csv"), row.names = FALSE)
 
 save(metric, densities, density_min, density_max, pffr_family, family_name,
      Y_clean, Y_complete, predictor_df_clean, predictor_df_scaled_clean,
-     pffr_fit, pffr_intercept_only, pffr_constant, fpca_result, depth_values, outlier_info,
+     pffr_fit, pffr_intercept_only, pffr_constant, depth_values, outlier_info,
      predictor_tests, summary_results, lr_test_overall, ve_full, ve_intercept, functional_ve, ve_label,
      bootstrap_coefs, beta_curves, beta_sig, R2_function,
      subjects_to_exclude, all_predictors, vars_to_skip_scaling, gba_sqrt_applied, run_meta,
