@@ -119,7 +119,10 @@ out_dir <- dirname(OUT_FULL)
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
 # --- Write full cohort (VPT + FT) ---
-write_xlsx(merged, OUT_FULL)
+# VPT-only clinical variables (cranial ultrasound findings, revised BW z-score)
+# are undefined for FT and are written to the VPT-only file only.
+VPT_ONLY_COLS <- c("anyivh", "hydrocephalus_dc", "bw_z_new")
+write_xlsx(merged[, setdiff(names(merged), VPT_ONLY_COLS)], OUT_FULL)
 cat(sprintf("Wrote: %s\n", OUT_FULL))
 
 # --- Write VPT-only (drop Group) ---
