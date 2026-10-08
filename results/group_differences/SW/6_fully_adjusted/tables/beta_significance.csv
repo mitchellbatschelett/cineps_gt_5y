@@ -1,0 +1,7 @@
+"term","label","bootstrap_term","significant","ci_excludes_zero_ranges","pct_density_significant","direction_in_sig_region","mean_beta"
+"Intercept","Intercept","Intercept(densities)",TRUE,"11-55.1%, 60.4-100%",95,"negative",-0.000474000506098029
+"Group","Group (VPT vs FT)","Group(densities)",TRUE,"11-43.4%",37,"positive",0.0743031313577346
+"age_at_5y_mri","Age at MRI","age_at_5y_mri(densities)",FALSE,"ns",0,NA,-0.0033964951879716
+"eTIV","eTIV","eTIV(densities)",FALSE,"ns",0,NA,0.035187950815516
+"sex","Sex","sex(densities)",FALSE,"ns",0,NA,-0.0460414479553721
+"repol_rel_rms_mean","Motion (eddy relative RMS)","repol_rel_rms_mean(densities)",FALSE,"ns",0,NA,0.0210465084292645

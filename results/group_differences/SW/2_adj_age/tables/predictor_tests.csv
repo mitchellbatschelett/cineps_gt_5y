@@ -1,0 +1,3 @@
+"Predictor","Label","Test_Statistic","Test_Type","p_value","functional_ve","semi_partial_r"
+"Group","Group (VPT vs FT)",871.129607630675,"Chisq",6.28266682399351e-187,0.00670100460837386,0.0618819699589795
+"age_at_5y_mri","Age at MRI",139.620355774474,"Chisq",1.85139643093729e-25,0.00105102685786132,0.0243481034745745

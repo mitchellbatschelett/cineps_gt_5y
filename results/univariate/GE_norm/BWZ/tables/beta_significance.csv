@@ -1,0 +1,8 @@
+"term","label","bootstrap_term","significant","ci_excludes_zero_ranges","pct_density_significant","direction_in_sig_region","mean_beta"
+"Intercept","Intercept","Intercept(densities)",TRUE,"11-15.5%, 17.3-51.5%, 54.2-100%",97,"negative",-0.000213973298936857
+"bw_z_new","Birth weight z-score","bw_z_new(densities)",TRUE,"11-38.0%",31,"positive",0.0032110036491278
+"eTIV","eTIV","eTIV(densities)",TRUE,"11-100%",100,"negative",-0.00826686910855169
+"sex","Sex","sex(densities)",FALSE,"ns",0,NA,-0.0059938256223397
+"sriskscore","Social risk score","sriskscore(densities)",TRUE,"34.4-74.8%",46,"positive",0.00324950297428541
+"age_at_5y_mri","Age at MRI","age_at_5y_mri(densities)",FALSE,"ns",0,NA,-0.000201284892453794
+"repol_rel_rms_mean","Motion (eddy relative RMS)","repol_rel_rms_mean(densities)",FALSE,"ns",0,NA,0.000592641657980355

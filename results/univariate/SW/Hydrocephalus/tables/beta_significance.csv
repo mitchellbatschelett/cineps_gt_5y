@@ -1,0 +1,8 @@
+"term","label","bootstrap_term","significant","ci_excludes_zero_ranges","pct_density_significant","direction_in_sig_region","mean_beta"
+"Intercept","Intercept","Intercept(densities)",TRUE,"11-53.3%, 59.5-100%",94,"negative",-0.000364536852079749
+"hydrocephalus_dc","Hydrocephalus","hydrocephalus_dc(densities)",TRUE,"11-29.9%",22,"positive",0.0668379104251757
+"eTIV","eTIV","eTIV(densities)",FALSE,"ns",0,NA,0.0106223459948582
+"sex","Sex","sex(densities)",FALSE,"ns",0,NA,-0.0878301509748936
+"sriskscore","Social risk score","sriskscore(densities)",TRUE,"32.6-32.6%, 38.0-39.8%",4,"positive",0.0300676973603787
+"age_at_5y_mri","Age at MRI","age_at_5y_mri(densities)",TRUE,"22.7-27.2%",6,"negative",-0.0241081397392485
+"repol_rel_rms_mean","Motion (eddy relative RMS)","repol_rel_rms_mean(densities)",FALSE,"ns",0,NA,0.0373481445041646

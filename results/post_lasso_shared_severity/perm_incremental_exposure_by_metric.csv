@@ -1,25 +1,33 @@
 "metric","metric_label","exposure","exposure_label","K","achieved_cumPVE","T_inc","p_inc_perm"
-"rand_norm_wei_ACC","Clustering (ACC)","globalbrainscore2","GBS2",5,0.997621321324131,4.11510064166417,0.000999
-"rand_norm_wei_ACC","Clustering (ACC)","bpd2","BPD",5,0.997621321324131,1.36784710127617,0.039
-"rand_norm_wei_ACC","Clustering (ACC)","ga","Gestational Age",5,0.997621321324131,0.849600141717975,0.11
-"rand_norm_wei_ACC","Clustering (ACC)","bw_z","Birth Weight Z",5,0.997621321324131,0.214324453739861,0.452
-"rand_norm_wei_ACC","Clustering (ACC)","sepsis2","Sepsis",5,0.997621321324131,0.115231484434217,0.635
-"rand_norm_wei_ACC","Clustering (ACC)","anyrop","ROP",5,0.997621321324131,0.0371883541164666,0.869
-"rand_norm_wei_GE","Global Efficiency (GE)","bpd2","BPD",3,0.995891491826427,0.14005800522629,0.0699
-"rand_norm_wei_GE","Global Efficiency (GE)","ga","Gestational Age",3,0.995891491826427,0.114376103752016,0.0909
-"rand_norm_wei_GE","Global Efficiency (GE)","bw_z","Birth Weight Z",3,0.995891491826427,0.0938317456667578,0.122
-"rand_norm_wei_GE","Global Efficiency (GE)","anyrop","ROP",3,0.995891491826427,0.0421946484149843,0.332
-"rand_norm_wei_GE","Global Efficiency (GE)","globalbrainscore2","GBS2",3,0.995891491826427,0.0237123083888126,0.454
-"rand_norm_wei_GE","Global Efficiency (GE)","sepsis2","Sepsis",3,0.995891491826427,0.0107254410749366,0.701
-"rand_norm_wei_SW","Small-Worldness (SW)","anyrop","ROP",5,0.995390983446654,75.0021616481804,0.022
-"rand_norm_wei_SW","Small-Worldness (SW)","globalbrainscore2","GBS2",5,0.995390983446654,25.1801655224911,0.205
-"rand_norm_wei_SW","Small-Worldness (SW)","sepsis2","Sepsis",5,0.995390983446654,4.08696558202072,0.661
-"rand_norm_wei_SW","Small-Worldness (SW)","ga","Gestational Age",5,0.995390983446654,3.39320656296432,0.737
-"rand_norm_wei_SW","Small-Worldness (SW)","bpd2","BPD",5,0.995390983446654,2.47567726018751,0.771
-"rand_norm_wei_SW","Small-Worldness (SW)","bw_z","Birth Weight Z",5,0.995390983446654,1.20590971928943,0.922
-"str","Strength","globalbrainscore2","GBS2",3,0.999991587450297,552.30257969705,0.02
-"str","Strength","ga","Gestational Age",3,0.999991587450297,117.342706943693,0.274
-"str","Strength","bw_z","Birth Weight Z",3,0.999991587450297,61.148710752918,0.442
-"str","Strength","sepsis2","Sepsis",3,0.999991587450297,20.5000965300843,0.649
-"str","Strength","bpd2","BPD",3,0.999991587450297,16.867433815024,0.675
-"str","Strength","anyrop","ROP",3,0.999991587450297,3.39990883228008,0.846
+"rand_norm_wei_ACC","Clustering (ACC)","globalbrainscore2","GBS2",5,0.996942164413805,1.90718355642369,0.005
+"rand_norm_wei_ACC","Clustering (ACC)","hydrocephalus_dc","Hydrocephalus",5,0.996942164413805,0.541324365286933,0.129
+"rand_norm_wei_ACC","Clustering (ACC)","bpd2","BPD",5,0.996942164413805,0.285528502537502,0.298
+"rand_norm_wei_ACC","Clustering (ACC)","sepsis2","Sepsis",5,0.996942164413805,0.216143521133342,0.345
+"rand_norm_wei_ACC","Clustering (ACC)","anyivh","IVH",5,0.996942164413805,0.144195872076602,0.48
+"rand_norm_wei_ACC","Clustering (ACC)","anyrop","ROP",5,0.996942164413805,0.0753608692553152,0.651
+"rand_norm_wei_ACC","Clustering (ACC)","ga","Gestational Age",5,0.996942164413805,0.0682179203430679,0.706
+"rand_norm_wei_ACC","Clustering (ACC)","bw_z_new","Birth Weight Z",5,0.996942164413805,0.0382765099304442,0.814
+"rand_norm_wei_GE","Global Efficiency (GE)","anyrop","ROP",3,0.996034084976574,0.214001929641017,0.015
+"rand_norm_wei_GE","Global Efficiency (GE)","hydrocephalus_dc","Hydrocephalus",3,0.996034084976574,0.218395170764877,0.024
+"rand_norm_wei_GE","Global Efficiency (GE)","anyivh","IVH",3,0.996034084976574,0.192784272548794,0.028
+"rand_norm_wei_GE","Global Efficiency (GE)","bw_z_new","Birth Weight Z",3,0.996034084976574,0.103797369572272,0.111
+"rand_norm_wei_GE","Global Efficiency (GE)","ga","Gestational Age",3,0.996034084976574,0.0532913445400355,0.225
+"rand_norm_wei_GE","Global Efficiency (GE)","bpd2","BPD",3,0.996034084976574,0.0158639200255778,0.575
+"rand_norm_wei_GE","Global Efficiency (GE)","globalbrainscore2","GBS2",3,0.996034084976574,0.0134549610046644,0.611
+"rand_norm_wei_GE","Global Efficiency (GE)","sepsis2","Sepsis",3,0.996034084976574,0.00764322606057843,0.744
+"rand_norm_wei_SW","Small-Worldness (SW)","ga","Gestational Age",6,0.9966195185057,131.413587598376,0.296
+"rand_norm_wei_SW","Small-Worldness (SW)","globalbrainscore2","GBS2",6,0.9966195185057,108.922933641256,0.348
+"rand_norm_wei_SW","Small-Worldness (SW)","anyrop","ROP",6,0.9966195185057,92.5411020664169,0.4
+"rand_norm_wei_SW","Small-Worldness (SW)","bw_z_new","Birth Weight Z",6,0.9966195185057,39.4696764829215,0.635
+"rand_norm_wei_SW","Small-Worldness (SW)","anyivh","IVH",6,0.9966195185057,40.9324009993896,0.645
+"rand_norm_wei_SW","Small-Worldness (SW)","hydrocephalus_dc","Hydrocephalus",6,0.9966195185057,24.7717069327649,0.787
+"rand_norm_wei_SW","Small-Worldness (SW)","bpd2","BPD",6,0.9966195185057,10.5051553018032,0.909
+"rand_norm_wei_SW","Small-Worldness (SW)","sepsis2","Sepsis",6,0.9966195185057,10.7326774599367,0.918
+"str","Strength","hydrocephalus_dc","Hydrocephalus",3,0.999990409661446,750.134783424551,0.003
+"str","Strength","anyivh","IVH",3,0.999990409661446,580.579507092405,0.00599
+"str","Strength","globalbrainscore2","GBS2",3,0.999990409661446,500.985170313559,0.00699
+"str","Strength","bw_z_new","Birth Weight Z",3,0.999990409661446,95.7715026573837,0.234
+"str","Strength","ga","Gestational Age",3,0.999990409661446,50.6459292712646,0.394
+"str","Strength","bpd2","BPD",3,0.999990409661446,42.8648787505375,0.426
+"str","Strength","anyrop","ROP",3,0.999990409661446,42.9589224596356,0.432
+"str","Strength","sepsis2","Sepsis",3,0.999990409661446,0.485451276174294,0.934

@@ -1,0 +1,2 @@
+"Index","Pipeline","Analysis","Metric","Metric_Label","Model","Predictors","Family","Density_Range","N_Original","N_Excluded_IDs","N_Final","N_Depth_Flagged","GBA_Sqrt_Applied","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold","Bootstrap_Completed"
+25,"repol","group_differences","ACC","Raw ACC","Unadjusted","Group","gaussian","11-100%",216,0,216,11,FALSE,0.952606585669174,0.0236397558387532,"R^2",37.6199907974748,"F",7.31743946743023e-68,TRUE,0.001,TRUE

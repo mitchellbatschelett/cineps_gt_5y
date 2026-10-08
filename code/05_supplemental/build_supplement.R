@@ -1,13 +1,35 @@
 ################################################################################
-#
-#   CINEPS GT MANUSCRIPT --- SUPPLEMENT BUILDER
-#
-#   Generates Supplementary Figures and Tables from current RData files and
-#   analytic data, using the same path, helper, and naming conventions as
-#   `build_main_results.R`.
-#
-#.
-#
+#                                                                              #
+#   CINEPS GT MANUSCRIPT (NeuroImage revision) - SUPPLEMENT FIGURES & TABLES   #
+#                                                                              #
+#   Reproduces Supplementary Tables 1-7 and Supplementary Figures 1-22 as      #
+#   they appear in the revised supplement, using the same path, helper, and    #
+#   naming conventions as build_main_results.R. Reads saved results only;      #
+#   no models are refitted.                                                    #
+#                                                                              #
+#   INPUTS                                                                     #
+#     data/analysis_ready/cohort_171VPT_45FT_postVQC.xlsx                      #
+#     data/intermediate/pilot_1000null_merged.xlsx                             #
+#     data/intermediate/fragmentation_by_density.csv                           #
+#     results/group_differences/<metric>/<config>/                             #
+#         {tables/predictor_tests.csv, tables/summary.csv,                     #
+#          model/FDA_results.RData}                                            #
+#     results/univariate/<metric>/<exposure>/model/FDA_results.RData           #
+#     results/univariate_sensitivity/ACC_norm/GBA_high_gba_rem/                #
+#         model/FDA_results.RData                                              #
+#     results/stability_selection/ACC_sensitivity/{high_gba_rem,gba_binary}/   #
+#         rand_norm_wei_ACC_stabsel_results.RData                              #
+#     results/stability_selection_sensitivity/                                 #
+#         sensitivity_selection_frequencies.csv                                #
+#     results/post_lasso_shared_severity/*.csv                                 #
+#                                                                              #
+#   OUTPUTS                                                                    #
+#     tables/supplement/SuppTbl{1-7}_*.csv                                     #
+#     figures/supplement/SuppFig{1-22}_*.{png,pdf}                             #
+#                                                                              #
+#   REQUIRES                                                                   #
+#     R 4.4.0; readxl, dplyr, tidyr, tibble, ggplot2, irr, patchwork, refund   #
+#                                                                              #
 ################################################################################
 
 
@@ -15,87 +37,107 @@
 # SECTION 0  CONFIGURATION
 # ============================================================================
 
-# --- Resolve repo root ----------------------------------------------------
-# Tries three strategies, in order:
-#   1. If this script was source()'d, derive its location from sys.frame
-#      and step up to the repo root (two levels above code/05_supplemental).
-#   2. If getwd() is already inside the repo, walk upward until we find one
-#      with `data/analysis_ready/` and `code/`.
-#   3. Fall back to hardcoded default; user can override before sourcing.
-#
-# Override by setting `repo_root` in the global environment BEFORE source():
-#   repo_root <- "/full/path/to/repository"
-#   source(".../build_supplement.R")
+# --- STRICT flag --------------------------------------------------------------
+# TRUE  (ship): any missing input file is a fatal error (checked below, before
+#               any output is written).
+# FALSE (dev):  missing inputs are reported and the affected panel/table is
+#               skipped.
 
+STRICT <- TRUE
+
+# --- Repo root and derived paths ---------------------------------------------
+# Locate the repository root automatically so a fresh clone runs without edits.
+# Order: (0) honor a `repo_root` already set in the global env; (1) derive this
+# script's own location and walk upward; (2) walk upward from the working dir.
+# A folder is the repo root if it contains both `data/analysis_ready/` and `code/`.
+# Manual override if auto-detection ever fails:
+#   repo_root <- "/full/path/to/repository"   # then source() this script
 .is_repo_root <- function(p) {
-  dir.exists(file.path(p, "data", "analysis_ready")) &&
-    dir.exists(file.path(p, "code"))
+  dir.exists(file.path(p, "data", "analysis_ready")) && dir.exists(file.path(p, "code"))
 }
-
 .find_repo_root_from_path <- function(p) {
   p <- normalizePath(p, winslash = "/", mustWork = FALSE)
-  for (i in 1:6) {
+  for (i in 1:8) {
     if (.is_repo_root(p)) return(p)
-    parent <- dirname(p)
-    if (parent == p) break
-    p <- parent
+    parent <- dirname(p); if (parent == p) break; p <- parent
   }
   NULL
 }
-
-# Strategy 0: honor a pre-set repo_root from the global env
-if (exists("repo_root", inherits = TRUE) &&
-    is.character(repo_root) && length(repo_root) == 1 &&
+if (exists("repo_root", inherits = TRUE) && is.character(repo_root) &&
+    length(repo_root) == 1 &&
     .is_repo_root(normalizePath(repo_root, winslash = "/", mustWork = FALSE))) {
   repo_root <- normalizePath(repo_root, winslash = "/", mustWork = TRUE)
 } else {
   repo_root <- NULL
-  
-  # Strategy 1: derive from source()'d script location
   this_script <- tryCatch({
-    sf <- sys.frames()
-    paths <- character(0)
+    sf <- sys.frames(); paths <- character(0)
     for (fr in sf) {
-      ofile <- tryCatch(get("ofile", envir = fr, inherits = FALSE),
-                        error = function(e) NULL)
-      if (!is.null(ofile) && is.character(ofile) && nzchar(ofile)) {
-        paths <- c(paths, ofile)
-      }
+      ofile <- tryCatch(get("ofile", envir = fr, inherits = FALSE), error = function(e) NULL)
+      if (!is.null(ofile) && is.character(ofile) && nzchar(ofile)) paths <- c(paths, ofile)
     }
     if (length(paths) > 0) paths[length(paths)] else NULL
   }, error = function(e) NULL)
-  
-  if (!is.null(this_script)) {
-    repo_root <- .find_repo_root_from_path(dirname(this_script))
-  }
-  
-  # Strategy 2: walk up from cwd
-  if (is.null(repo_root)) {
-    repo_root <- .find_repo_root_from_path(getwd())
-  }
-  
-  if (is.null(repo_root)) {
-    stop(
-      "Could not locate repo root. Set it manually before source()-ing:\n",
-      "  repo_root <- \"/full/path/to/repository\"\n",
-      "  source(\".../build_supplement.R\")"
-    )
-  }
+  if (!is.null(this_script)) repo_root <- .find_repo_root_from_path(dirname(this_script))
+  if (is.null(repo_root))    repo_root <- .find_repo_root_from_path(getwd())
+  if (is.null(repo_root))
+    stop("Could not locate repo root. Set it manually before source()-ing:\n",
+         "  repo_root <- \"/full/path/to/repository\"")
 }
 cat(sprintf("Repo root: %s\n", repo_root))
 
 # --- Input paths -----------------------------------------------------------
-data_xlsx  <- file.path(repo_root, "data", "analysis_ready",
-                        "cohort_171VPT_45FT_postVQC.xlsx")
-pilot_xlsx <- file.path(repo_root, "data", "intermediate",
-                        "pilot_1000null_merged.xlsx")
-frag_csv   <- file.path(repo_root, "data", "intermediate",
-                        "fragmentation_by_density.csv")
+data_xlsx  <- file.path(repo_root, "data", "analysis_ready", "cohort_171VPT_45FT_postVQC.xlsx")
+pilot_xlsx <- file.path(repo_root, "data", "intermediate", "pilot_1000null_merged.xlsx")
+frag_csv   <- file.path(repo_root, "data", "intermediate", "fragmentation_by_density.csv")
+
+grp_root      <- file.path(repo_root, "results", "group_differences")
+univ_root     <- file.path(repo_root, "results", "univariate")
+univ_sens_root <- file.path(repo_root, "results", "univariate_sensitivity")
+stabsel_root  <- file.path(repo_root, "results", "stability_selection")
+stabsens_root <- file.path(repo_root, "results", "stability_selection_sensitivity")
+severity_root <- file.path(repo_root, "results", "post_lasso_shared_severity")
 
 # --- Output paths ----------------------------------------------------------
 tables_dir  <- file.path(repo_root, "tables",  "supplement")
 figures_dir <- file.path(repo_root, "figures", "supplement")
+
+# --- Required inputs (checked up front when STRICT) --------------------------
+.grp_metrics  <- c("strength", "GE_norm", "ACC_norm", "SW", "GE_raw", "ACC_raw")
+.grp_configs  <- c("1_unadjusted", "2_adj_age", "3_adj_eTIV", "4_adj_sex",
+                   "5_adj_motion", "6_fully_adjusted")
+.univ_metrics <- c("strength", "GE_norm", "ACC_norm", "SW")
+.univ_exps    <- c("BPD", "BWZ", "GA", "GBA", "ROP", "Sepsis", "DWMA", "IVH",
+                   "Hydrocephalus")
+required_inputs <- c(
+  data_xlsx, pilot_xlsx, frag_csv,
+  as.vector(outer(.grp_metrics, .grp_configs, function(m, c)
+    file.path(grp_root, m, c, "tables", "predictor_tests.csv"))),
+  as.vector(outer(.grp_metrics, .grp_configs, function(m, c)
+    file.path(grp_root, m, c, "tables", "summary.csv"))),
+  file.path(grp_root, .grp_metrics, "6_fully_adjusted", "model", "FDA_results.RData"),
+  file.path(grp_root, .univ_metrics, "1_unadjusted", "model", "FDA_results.RData"),
+  as.vector(outer(.univ_metrics, .univ_exps, function(m, e)
+    file.path(univ_root, m, e, "model", "FDA_results.RData"))),
+  file.path(univ_sens_root, "ACC_norm", "GBA_high_gba_rem", "model", "FDA_results.RData"),
+  file.path(stabsel_root, "ACC_sensitivity", c("high_gba_rem", "gba_binary"),
+            "rand_norm_wei_ACC_stabsel_results.RData"),
+  file.path(stabsens_root, "sensitivity_selection_frequencies.csv"),
+  file.path(severity_root,
+            c("exposure_correlation_matrix.csv", "exposure_pca_variance.csv",
+              "exposure_pca_loadings.csv", "PC1_FPC_scores.csv",
+              "perm_global_exposure_set_by_metric.csv",
+              "perm_incremental_exposure_by_metric.csv",
+              "perm_latent_severity_by_metric.csv"))
+)
+.missing <- required_inputs[!file.exists(required_inputs)]
+if (length(.missing) > 0) {
+  msg <- paste0("Missing ", length(.missing), " required input(s):\n",
+                paste0("  ", sub(paste0("^", repo_root, "/"), "", .missing), collapse = "\n"))
+  if (STRICT) stop(msg, call. = FALSE) else warning(msg, call. = FALSE)
+}
+
 for (d in c(tables_dir, figures_dir)) if (!dir.exists(d)) dir.create(d, recursive = TRUE)
+
 
 # --- Analytic density range (matches manuscript) --------------------------
 density_min <- 11
@@ -626,13 +668,14 @@ cat("========================================\n")
 #   4a  Supplementary Figure 5  --- VPT vs FT raw mean +/- SD curves (6 panels)
 #   4b  Supplementary Table 3   --- Density single-cov ANCOVA (8 rows: full +
 #                                    outlier-excluded samples)
-#   4c  Supplementary Table 4   --- Per-IV PFFR output (84 rows)  [pending]
-#   4d  Supplementary Table 5   --- K-basis diagnostics (36 rows) [pending]
-#   4e  Supplementary Figs 7-11 --- Covariate beta(d) curves      [pending]
+#   4c  Supplementary Table 4   --- Per-IV PFFR output (84 rows)
+#   4d  Supplementary Table 5   --- K-basis diagnostics (36 rows)
+#   4e  Supplementary Figs 7-11 --- Covariate beta(d) curves
 #
 # 4a and 4b read from the analytic xlsx already loaded in Section 2.
-# 4c reads predictor_tests.csv + summary.csv from results/fda_group_differences/.
-# 4d-4e load fully-adjusted PFFR RData from the same directories.
+# 4c reads tables/predictor_tests.csv + tables/summary.csv from
+#    results/group_differences/<metric>/<config>/.
+# 4d-4e load model/FDA_results.RData from the same directories.
 # ============================================================================
 
 cat("\n========================================\n")
@@ -641,12 +684,18 @@ cat("========================================\n\n")
 
 # Per-metric subject exclusions
 n4_metric_excl <- list(
-  "str"               = c("128", "713"),
-  "rand_norm_wei_GE"  = c("659"),
+ # "str"               = c("128", "713"),
+  #"rand_norm_wei_GE"  = c("659"),
+  #"rand_norm_wei_ACC" = character(0),
+  #"rand_norm_wei_SW"  = c("309", "321", "8155"),
+  #"GE"                = c("128", "713"),
+  #"ACC"               = c("128", "713")
+  "str"               = character(0),
+  "rand_norm_wei_GE"  = c("659", "713"),
   "rand_norm_wei_ACC" = character(0),
-  "rand_norm_wei_SW"  = c("309", "321", "8155"),
-  "GE"                = c("128", "713"),
-  "ACC"               = c("128", "713")
+  "rand_norm_wei_SW"  = character(0),
+  "GE"                = character(0),
+  "ACC"               = character(0)
 )
 
 # --- Metric specification: column prefix in xlsx + display label + panel order ---
@@ -872,7 +921,7 @@ cat(sprintf("\nSaved: %s\n",
 # For each of 6 metrics x 6 covariate configs, reads the precomputed
 # predictor_tests.csv (per-term test statistic, p, functional VE/dev-explained,
 # semi-partial r) and summary.csv (family, N) from
-# results/fda_group_differences/<config_dir>/.
+# results/group_differences/<metric>/<config>/tables/.
 #
 # SW models use the scat (scaled t) family, so their Test_Statistic is chi^2
 # (not F) and their "functional_ve" is deviance explained (not variance
@@ -884,29 +933,23 @@ cat("\n--- 4c: Building Supplementary Table 4 ---\n\n")
 
 # --- Config spec: directory suffix + display label, in supplement row order ---
 n4_t4_configs <- list(
-  list(suffix = "Group_11-100_fullsample",
-       label  = "Unadjusted"),
-  list(suffix = "Group_eTIV_11-100_fullsample",
-       label  = "TIV"),
-  list(suffix = "Group_age_at_5y_mri_11-100_fullsample",
-       label  = "Age at MRI"),
-  list(suffix = "Group_sex_11-100_fullsample",
-       label  = "Sex"),
-  list(suffix = "Group_Rel_Motion_11-100_fullsample",
-       label  = "Relative motion"),
-  list(suffix = "Group_age_at_5y_mri_eTIV_sex_Rel_Motion_11-100_fullsample",
-       label  = "Fully adjusted")
+  list(suffix = "1_unadjusted",     label = "Unadjusted"),
+  list(suffix = "3_adj_eTIV",       label = "TIV"),
+  list(suffix = "2_adj_age",        label = "Age at MRI"),
+  list(suffix = "4_adj_sex",        label = "Sex"),
+  list(suffix = "5_adj_motion",     label = "Relative motion"),
+  list(suffix = "6_fully_adjusted", label = "Fully adjusted")
 )
 n4_t4_config_levels <- vapply(n4_t4_configs, function(x) x$label, character(1))
 
 # --- Metric spec: directory prefix + display label, supplement row order ---
 n4_t4_metrics <- list(
-  list(prefix = "str",                label = "Strength"),
-  list(prefix = "rand_norm_wei_GE",   label = "Normalized GE"),
-  list(prefix = "rand_norm_wei_ACC",  label = "Normalized ACC"),
-  list(prefix = "rand_norm_wei_SW",   label = "Small-Worldness"),
-  list(prefix = "GE",                 label = "Raw GE"),
-  list(prefix = "ACC",                label = "Raw ACC")
+  list(prefix = "strength",  label = "Strength"),
+  list(prefix = "GE_norm",   label = "Normalized GE"),
+  list(prefix = "ACC_norm",  label = "Normalized ACC"),
+  list(prefix = "SW",        label = "Small-Worldness"),
+  list(prefix = "GE_raw",    label = "Raw GE"),
+  list(prefix = "ACC_raw",   label = "Raw ACC")
 )
 n4_t4_metric_levels <- vapply(n4_t4_metrics, function(x) x$label, character(1))
 
@@ -916,7 +959,10 @@ n4_t4_predictor_labels <- c(
   "eTIV"           = "TIV",
   "age_at_5y_mri"  = "Age at MRI",
   "sex"            = "Sex",
-  "Rel_Motion"     = "Relative motion"
+  # Saved results name the motion covariate repol_rel_rms_mean (= Rel_Motion
+  # in the cohort files); accept both.
+  "Rel_Motion"         = "Relative motion",
+  "repol_rel_rms_mean" = "Relative motion"
 )
 
 # --- p-value formatter ---
@@ -928,16 +974,18 @@ fmt_p_t4 <- function(p) {
 
 # --- Read one (metric, config) directory's predictor_tests + summary ---
 read_t4_row_block <- function(metric_prefix, config_suffix, metric_label, config_label) {
-  dir_name <- sprintf("%s_FDA_%s", metric_prefix, config_suffix)
-  dir_path <- file.path(repo_root, "results", "fda_group_differences", dir_name)
+  
+  dir_name <- file.path(metric_prefix, config_suffix)
+  dir_path <- file.path(grp_root, dir_name)
   
   if (!dir.exists(dir_path)) {
     warning(sprintf("Missing directory: %s", dir_path))
     return(NULL)
   }
   
-  pt_path  <- file.path(dir_path, sprintf("%s_predictor_tests.csv", metric_prefix))
-  sum_path <- file.path(dir_path, sprintf("%s_summary.csv",         metric_prefix))
+  
+  pt_path  <- file.path(dir_path, "tables", "predictor_tests.csv")
+  sum_path <- file.path(dir_path, "tables", "summary.csv")
   
   if (!file.exists(pt_path)) {
     warning(sprintf("Missing predictor_tests.csv: %s", pt_path))
@@ -1048,22 +1096,22 @@ suppressPackageStartupMessages({
 # --- Metric spec: directory + RData prefix, supplement row order ---
 n4_t5_metrics <- list(
   list(label = "Strength",
-       dir   = "str_FDA_Group_age_at_5y_mri_eTIV_sex_Rel_Motion_11-100_fullsample",
+       dir   = "strength/6_fully_adjusted",
        prefix = "str"),
   list(label = "Normalized GE",
-       dir   = "rand_norm_wei_GE_FDA_Group_age_at_5y_mri_eTIV_sex_Rel_Motion_11-100_fullsample",
+       dir   = "GE_norm/6_fully_adjusted",
        prefix = "rand_norm_wei_GE"),
   list(label = "Normalized ACC",
-       dir   = "rand_norm_wei_ACC_FDA_Group_age_at_5y_mri_eTIV_sex_Rel_Motion_11-100_fullsample",
+       dir   = "ACC_norm/6_fully_adjusted",
        prefix = "rand_norm_wei_ACC"),
   list(label = "Small-Worldness",
-       dir   = "rand_norm_wei_SW_FDA_Group_age_at_5y_mri_eTIV_sex_Rel_Motion_11-100_fullsample",
+       dir   = "SW/6_fully_adjusted",
        prefix = "rand_norm_wei_SW"),
   list(label = "Raw GE",
-       dir   = "GE_FDA_Group_age_at_5y_mri_eTIV_sex_Rel_Motion_11-100_fullsample",
+       dir   = "GE_raw/6_fully_adjusted",
        prefix = "GE"),
   list(label = "Raw ACC",
-       dir   = "ACC_FDA_Group_age_at_5y_mri_eTIV_sex_Rel_Motion_11-100_fullsample",
+       dir   = "ACC_raw/6_fully_adjusted",
        prefix = "ACC")
 )
 n4_t5_metric_levels <- vapply(n4_t5_metrics, function(x) x$label, character(1))
@@ -1077,7 +1125,10 @@ n4_t5_pretty <- c(
   "eTIV"         = "Total intracranial volume",
   "age_at_5y_mri" = "Age at MRI",
   "sex"          = "Sex",
-  "Rel_Motion"   = "Relative motion"
+  # Saved results name the motion covariate repol_rel_rms_mean (= Rel_Motion
+  # in the cohort files); accept both.
+  "Rel_Motion"         = "Relative motion",
+  "repol_rel_rms_mean" = "Relative motion"
 )
 n4_t5_term_order <- c("Intercept", "Group (VPT vs FT)", "Age at MRI",
                       "Total intracranial volume", "Sex", "Relative motion")
@@ -1173,8 +1224,7 @@ extract_kcheck <- function(rdata_path, metric_label) {
 # --- Loop through all 6 fully-adjusted fits ---
 t5_blocks <- list()
 for (mspec in n4_t5_metrics) {
-  rdata_path <- file.path(repo_root, "results", "fda_group_differences",
-                          mspec$dir, paste0(mspec$prefix, "_FDA_results.RData"))
+  rdata_path <- file.path(grp_root, mspec$dir, "model", "FDA_results.RData")
   cat(sprintf("  [%s] ", mspec$label))
   k_df <- extract_kcheck(rdata_path, mspec$label)
   if (is.null(k_df)) {
@@ -1235,7 +1285,7 @@ if (length(t5_blocks) == 0) {
 #   Raw ACC), 1x2 facet, rendered in red to distinguish from the normalized
 #   metrics' panels.
 #
-# Source: the same fully-adjusted *_FDA_results.RData used by Sup Tbl 5
+# Source: the same fully-adjusted model/FDA_results.RData used by Sup Tbl 5
 #   (n4_t5_metrics), using the n4_t5_pretty label map and the shared color,
 #   facet, and theme conventions.
 # ============================================================================
@@ -1245,17 +1295,34 @@ cat("\n--- 4e: Building Supplementary Figures 7-11 ---\n\n")
 # Covariate panel order (matches figure captions: TIV, age, sex, motion)
 covar_order <- c("Total intracranial volume", "Age at MRI", "Sex", "Relative motion")
 
-# --- Capture fitted beta(density) curves from a pffr fit ---------------------
-# plot.pffr() returns, invisibly, a list of per-term plot objects each carrying
-# $x (density grid) and $fit (fitted beta). Route the plot to a throwaway
-# device so nothing is drawn. (Replicates the pipeline's getPlotObject.)
-get_plot_object <- function(model) {
-  ff <- tempfile(fileext = ".pdf")
-  pdf(file = ff)
-  po <- plot(model)
-  dev.off()
-  unlink(ff)
-  po
+# --- beta(density) + bootstrap CI for one smooth term from the saved object --
+# Reads the stored bootstrap object (refund::coefboot.pffr output) directly;
+# nothing is re-plotted or refitted. Two storage formats occur in the saved
+# results, depending on the refund version used at fit time:
+#   refund < 0.1-40 : smterms[[i]] is a data.frame with the density grid,
+#                     `value` (beta) and the `2.5%` / `97.5%` bootstrap bounds
+#   refund >= 0.1-40: smterms[[i]] has `x` (grid) and `value` (beta); bounds in
+#                     boot_ci$smterms[[name]][, c("lower_95", "upper_95")]
+# For the older format, `value` is identical to the beta(d) returned by
+# plot(<pffr fit>) (max abs difference <= 7e-16 across all saved fits).
+boot_term_curve <- function(bc, idx) {
+  sm <- bc$smterms[[idx]]
+  if (is.data.frame(sm) && all(c("2.5%", "97.5%") %in% names(sm))) {
+    other <- setdiff(names(sm), c("value", "se", "5%", "95%", "2.5%", "97.5%"))
+    grid  <- other[vapply(other, function(v) is.numeric(sm[[v]]) &&
+                            length(unique(sm[[v]])) > 1, logical(1))][1]
+    data.frame(density  = as.numeric(sm[[grid]]),
+               beta     = as.numeric(sm$value),
+               ci_lower = as.numeric(sm[["2.5%"]]),
+               ci_upper = as.numeric(sm[["97.5%"]]))
+  } else {
+    ci_m <- bc$boot_ci$smterms[[names(bc$smterms)[idx]]]
+    if (is.null(ci_m)) stop("Unrecognized bootstrap_coefs format")
+    data.frame(density  = as.numeric(sm$x),
+               beta     = as.numeric(sm$value),
+               ci_lower = as.numeric(ci_m[, "lower_95"]),
+               ci_upper = as.numeric(ci_m[, "upper_95"]))
+  }
 }
 
 # --- Extract beta(d) + bootstrap CI for ALL smooth terms of one fitted model -
@@ -1268,7 +1335,7 @@ extract_beta_curves <- function(rdata_path, metric_label) {
   }
   e <- new.env()
   load(rdata_path, envir = e)
-  if (is.null(e$pffr_fit) || is.null(e$bootstrap_coefs)) {
+  if (is.null(e$bootstrap_coefs)) {
     cat(sprintf("  [no bootstrap] %s\n", basename(rdata_path)))
     return(NULL)
   }
@@ -1278,9 +1345,7 @@ extract_beta_curves <- function(rdata_path, metric_label) {
   raw_term_names <- names(e$bootstrap_coefs$smterms)
   term_names     <- sub("\\(.*\\)$", "", raw_term_names)
   
-  po     <- get_plot_object(e$pffr_fit)
-  smList <- e$bootstrap_coefs$smterms
-  n_terms <- min(length(po), length(smList), length(term_names))
+  n_terms <- length(term_names)
   
   out_list <- list()
   for (i in seq_len(n_terms)) {
@@ -1292,10 +1357,7 @@ extract_beta_curves <- function(rdata_path, metric_label) {
       metric        = metric_label,
       predictor_raw = pred_raw,
       predictor     = pred_lbl,
-      density       = po[[i]]$x,
-      beta          = po[[i]]$fit,
-      ci_lower      = smList[[i]][["2.5%"]],
-      ci_upper      = smList[[i]][["97.5%"]],
+      boot_term_curve(e$bootstrap_coefs, i),
       stringsAsFactors = FALSE
     )
   }
@@ -1305,8 +1367,7 @@ extract_beta_curves <- function(rdata_path, metric_label) {
 # --- Extract beta curves for all 6 fully-adjusted fits -----------------------
 beta_all <- list()
 for (mspec in n4_t5_metrics) {
-  rdata_path <- file.path(repo_root, "results", "fda_group_differences",
-                          mspec$dir, paste0(mspec$prefix, "_FDA_results.RData"))
+  rdata_path <- file.path(grp_root, mspec$dir, "model", "FDA_results.RData")
   cat(sprintf("  [%s] ", mspec$label))
   bdf <- extract_beta_curves(rdata_path, mspec$label)
   if (is.null(bdf)) { cat("no output\n"); next }
@@ -1320,17 +1381,16 @@ for (mspec in n4_t5_metrics) {
 #     (Supp Figs 7-10) and main-text Figure 2: ribbon = bootstrap 95% CI,
 #     faceted 2x2 by metric. Uses the UNADJUSTED group-difference fits.
 n4_unadj_metrics <- list(
-  list(label = "Strength",        dir = "str_FDA_Group_11-100_fullsample",               prefix = "str"),
-  list(label = "Normalized GE",   dir = "rand_norm_wei_GE_FDA_Group_11-100_fullsample",  prefix = "rand_norm_wei_GE"),
-  list(label = "Normalized ACC",  dir = "rand_norm_wei_ACC_FDA_Group_11-100_fullsample", prefix = "rand_norm_wei_ACC"),
-  list(label = "Small-Worldness", dir = "rand_norm_wei_SW_FDA_Group_11-100_fullsample",  prefix = "rand_norm_wei_SW")
+  list(label = "Strength",        dir = "strength/1_unadjusted", prefix = "str"),
+  list(label = "Normalized GE",   dir = "GE_norm/1_unadjusted",  prefix = "rand_norm_wei_GE"),
+  list(label = "Normalized ACC",  dir = "ACC_norm/1_unadjusted", prefix = "rand_norm_wei_ACC"),
+  list(label = "Small-Worldness", dir = "SW/1_unadjusted",       prefix = "rand_norm_wei_SW")
 )
 n4_unadj_levels <- vapply(n4_unadj_metrics, function(x) x$label, character(1))
 
 beta_unadj_group <- list()
 for (mspec in n4_unadj_metrics) {
-  rdata_path <- file.path(repo_root, "results", "fda_group_differences",
-                          mspec$dir, paste0(mspec$prefix, "_FDA_results.RData"))
+  rdata_path <- file.path(grp_root, mspec$dir, "model", "FDA_results.RData")
   cat(sprintf("  [%s] ", mspec$label))
   bdf <- extract_beta_curves(rdata_path, mspec$label)
   if (is.null(bdf)) { cat("no output\n"); next }
@@ -1467,9 +1527,8 @@ cat("========================================\n")
 #   CI from / to   = density range over which the CI excludes 0.
 #   % density sig  = fraction of densities where the CI excludes 0.
 #
-# Source: results/fda_univariate/{metric}/{metric}_univariate_{exposure}_11-100/
-#         {metric}_univariate_{exposure}_FDA_results.RData
-# Plotting reuses theme_supp(), save_fig(), get_plot_object() (defined in 4e).
+# Source: results/univariate/<metric>/<exposure>/model/FDA_results.RData
+# Plotting reuses theme_supp(), save_fig(), boot_term_curve() (defined in 4e).
 # ============================================================================
 # ============================================================================
 
@@ -1479,32 +1538,34 @@ cat("========================================\n\n")
 
 # --- Metric specs (4 primary metrics; outcome folder + RData prefix) ---------
 n5_metrics <- list(
-  list(label = "Strength",        prefix = "str"),
-  list(label = "Normalized GE",   prefix = "rand_norm_wei_GE"),
-  list(label = "Normalized ACC",  prefix = "rand_norm_wei_ACC"),
-  list(label = "Small-Worldness", prefix = "rand_norm_wei_SW")
+  
+  list(label = "Strength",        prefix = "str",               folder = "strength"),
+  list(label = "Normalized GE",   prefix = "rand_norm_wei_GE",  folder = "GE_norm"),
+  list(label = "Normalized ACC",  prefix = "rand_norm_wei_ACC", folder = "ACC_norm"),
+  list(label = "Small-Worldness", prefix = "rand_norm_wei_SW",  folder = "SW")
+  
 )
 n5_metric_levels <- vapply(n5_metrics, function(x) x$label, character(1))
 
-# --- Exposure specs (7 candidate neonatal exposures; var name + label) -------
+# --- Exposure specs (9 neonatal exposures; folder, var name + label) --------
 # Order defines panel order in Figs 12-15 and row order within each metric
-# block of SuppTbl6 (matches THREE_fda_univariate_runs.R).
 n5_exposures <- list(
-  list(var = "bpd2",              label = "BPD"),
-  list(var = "bw_z",              label = "BWZ"),
-  list(var = "ga",                label = "GA"),
-  list(var = "globalbrainscore2", label = "GBA"),
-  list(var = "anyrop",            label = "ROP"),
-  list(var = "sepsis2",           label = "Sepsis"),
-  list(var = "dwma_percent",      label = "DWMA")
+  
+  list(folder = "BPD",           var = "bpd2",              label = "BPD"),
+  list(folder = "BWZ",           var = "bw_z_new",          label = "BWZ"),
+  list(folder = "GA",            var = "ga",                label = "GA"),
+  list(folder = "GBA",           var = "globalbrainscore2", label = "GBA"),
+  list(folder = "ROP",           var = "anyrop",            label = "ROP"),
+  list(folder = "Sepsis",        var = "sepsis2",           label = "Sepsis"),
+  list(folder = "DWMA",          var = "dwma_percent",      label = "DWMA"),
+  list(folder = "IVH",           var = "anyivh",            label = "IVH"),
+  list(folder = "Hydrocephalus", var = "hydrocephalus_dc",  label = "Hydrocephalus")
 )
 n5_panel_levels <- vapply(n5_exposures, function(x) x$label, character(1))
 
-# --- Locate one univariate RData file in the new fda_univariate layout -------
-find_univ_rdata <- function(metric_prefix, exposure_var) {
-  run_dir <- sprintf("%s_univariate_%s_11-100", metric_prefix, exposure_var)
-  rdata   <- sprintf("%s_univariate_%s_FDA_results.RData", metric_prefix, exposure_var)
-  p <- file.path(repo_root, "results", "fda_univariate", metric_prefix, run_dir, rdata)
+
+find_univ_rdata <- function(metric_folder, exposure_folder) {
+  p <- file.path(univ_root, metric_folder, exposure_folder, "model", "FDA_results.RData")
   if (file.exists(p)) return(p)
   NULL
 }
@@ -1531,19 +1592,14 @@ extract_univ_beta_and_stats <- function(rdata_path, exposure_var, exposure_label
     exp_term <- smterm_names[match_idx[1]]
   }
   
-  # beta(d) + bootstrap CI from the plot object (beta) and smterms (CIs),
-  # as in extract_beta_curves(). Index by matching the exposure term.
-  po       <- get_plot_object(e$pffr_fit)
-  raw_names <- sub("\\(.*\\)$", "", smterm_names)
-  idx <- which(raw_names == exposure_var)
-  if (length(idx) == 0) idx <- grep(exposure_var, smterm_names, fixed = TRUE)
-  idx <- idx[1]
-  
-  sm_df    <- e$bootstrap_coefs$smterms[[exp_term]]
-  density  <- po[[idx]]$x
-  beta     <- po[[idx]]$fit
-  ci_lower <- sm_df[["2.5%"]]
-  ci_upper <- sm_df[["97.5%"]]
+  # beta(d) + bootstrap CI from the saved bootstrap object (boot_term_curve(),
+  # defined in Note 4e). Index by matching the exposure term.
+  idx <- match(exp_term, smterm_names)
+  bt  <- boot_term_curve(e$bootstrap_coefs, idx)
+  density  <- bt$density
+  beta     <- bt$beta
+  ci_lower <- bt$ci_lower
+  ci_upper <- bt$ci_upper
   
   # Significance pattern from the bootstrap CI (excludes zero where lower>0 or upper<0)
   sig_mask <- (ci_lower > 0 & ci_upper > 0) | (ci_lower < 0 & ci_upper < 0)
@@ -1597,7 +1653,7 @@ stats_all  <- list()
 for (mspec in n5_metrics) {
   cat(sprintf("[%s]\n", mspec$label))
   for (espec in n5_exposures) {
-    rdata_path <- find_univ_rdata(mspec$prefix, espec$var)
+    rdata_path <- find_univ_rdata(mspec$folder, espec$folder)
     if (is.null(rdata_path)) {
       cat(sprintf("  [missing] %s x %s\n", mspec$label, espec$label)); next
     }
@@ -1681,7 +1737,7 @@ make_univ_metric_fig <- function(metric_label, fig_num) {
   names(panels) <- n5_panel_levels
   row1 <- panels[["BPD"]] | panels[["BWZ"]] | panels[["GA"]]
   row2 <- panels[["GBA"]] | panels[["ROP"]] | panels[["Sepsis"]]
-  row3 <- patchwork::plot_spacer() | panels[["DWMA"]] | patchwork::plot_spacer()
+  row3 <- panels[["DWMA"]] | panels[["IVH"]] | panels[["Hydrocephalus"]]
   combined <- (row1 / row2 / row3) +
     patchwork::plot_annotation(
       title   = sprintf("Supplementary Figure %d. Univariate beta(density) curves: %s",
@@ -1711,19 +1767,22 @@ cat("========================================\n")
 #
 #   Supplementary Figure 16 - ACC stability selection, 4 highest-GBA VPT
 #                             participants removed (high_gba_rem branch).
-#                             GBA remains the only stable exposure (~88%).
+#                             GBA is the most frequently selected exposure
+#                             but is not stably selected.
 #   Supplementary Figure 17 - ACC stability selection, GBA recoded binary
 #                             (globalcatmod >=8 vs <8; gba_binary branch).
-#                             GBA (binary) remains the only stable exposure (~91%).
+#                             GBA (binary) remains the only stable exposure.
 #
 # Each figure has two panels, identical in structure to main Figure 3:
 #   A) selection-frequency bars across the candidate exposures, 70% threshold line
 #   B) GBA beta(density) curve from the post-selection PFFR fit, with bootstrap CI
 #
-# Source (from FOUR_fda_stability_selection_runs.R):
-#   results/fda_stability_selection/ACC_sensitivity/
-#       rand_norm_wei_ACC_stabsel_11-100_high_gba_rem/rand_norm_wei_ACC_stabsel_results.RData
-#       rand_norm_wei_ACC_stabsel_11-100_gba_binary/  rand_norm_wei_ACC_stabsel_results.RData
+#   results/stability_selection/ACC_sensitivity/
+#       high_gba_rem/rand_norm_wei_ACC_stabsel_results.RData
+#       gba_binary/  rand_norm_wei_ACC_stabsel_results.RData
+# GBA is not stably selected in high_gba_rem, so panel B of Supp Fig 16 is
+# taken from the separate full-sample PFFR model (GBA + forced covariates):
+#   results/univariate_sensitivity/ACC_norm/GBA_high_gba_rem/model/FDA_results.RData
 #
 # In the gba_binary branch the GBA variable is "globalcatmod" (not
 # "globalbrainscore2"); exposure_labels maps both to "GBA".
@@ -1747,7 +1806,10 @@ n6_exposure_labels <- c(
   globalbrainscore2 = "GBA",
   globalcatmod      = "GBA",
   anyrop            = "ROP",
-  sepsis2           = "Sepsis"
+  sepsis2           = "Sepsis",
+  bw_z_new          = "BWZ",
+  anyivh            = "IVH",
+  hydrocephalus_dc  = "Hydrocephalus"
 )
 label_exposure6 <- function(raw_name) {
   if (raw_name %in% names(n6_exposure_labels)) n6_exposure_labels[[raw_name]] else raw_name
@@ -1762,31 +1824,15 @@ find_term_index6 <- function(term_names, predictor) {
   idx[1]
 }
 
-# CIs list from bootstrap_coefs$smterms.
-get_cis_list6 <- function(coefboot_bs) {
-  smList <- coefboot_bs$smterms
-  out <- vector("list", length(smList))
-  for (i in seq_along(smList)) {
-    out[[i]] <- list(ci_lower = smList[[i]][["2.5%"]],
-                     ci_upper = smList[[i]][["97.5%"]])
-  }
-  out
-}
-
-# Extract beta(d) + bootstrap CI for one predictor from a fitted model in env.
-# model_obj_name = "pffr_final" for the post-selection stab-sel fit.
-extract_beta_curve6 <- function(env, predictor, model_obj_name = "pffr_final") {
-  model <- env[[model_obj_name]]
-  if (is.null(model)) stop(sprintf("No %s in environment", model_obj_name))
+# Extract beta(d) + bootstrap CI for one predictor from the saved bootstrap
+# object in env (boot_term_curve(), defined in Note 4e).
+extract_beta_curve6 <- function(env, predictor) {
   if (is.null(env$bootstrap_coefs)) stop("No bootstrap_coefs in environment")
   term_names <- names(env$bootstrap_coefs$smterms)
   idx <- find_term_index6(term_names, predictor)
   if (is.na(idx)) stop(sprintf("Predictor '%s' not found among: %s",
                                predictor, paste(term_names, collapse = ", ")))
-  po  <- get_plot_object(model)   # defined in Note 4e
-  CIs <- get_cis_list6(env$bootstrap_coefs)
-  data.frame(density = po[[idx]]$x, beta = po[[idx]]$fit,
-             ci_lower = CIs[[idx]]$ci_lower, ci_upper = CIs[[idx]]$ci_upper)
+  boot_term_curve(env$bootstrap_coefs, idx)
 }
 
 # Effect direction from the bootstrap CI (sign where CI excludes 0; else peak).
@@ -1840,7 +1886,7 @@ build_stabsel_freq_panel <- function(selection_freq, panel_letter, panel_title) 
          title = sprintf("%s. %s", panel_letter, panel_title)) +
     theme_classic(base_size = 11) +
     theme(plot.title = element_text(face = "bold", hjust = 0, size = 13),
-          axis.text.x = element_text(size = 10, color = "black"),
+          axis.text.x = element_text(size = 10, color = "black", angle = 45, hjust =1),
           axis.text.y = element_text(size = 10, color = "black"),
           axis.title.y = element_text(size = 11),
           axis.ticks.x = element_blank())
@@ -1868,20 +1914,21 @@ build_stabsel_beta_panel <- function(beta_df, panel_letter, panel_title) {
 # the figure number, and a title tag for panel A.
 n6_branches <- list(
   list(branch    = "high_gba_rem",
-       subdir    = "rand_norm_wei_ACC_stabsel_11-100_high_gba_rem",
        gba_term  = "globalbrainscore2",
+       subdir    = "high_gba_rem",
+       refit_rdata = file.path(univ_sens_root, "ACC_norm", "GBA_high_gba_rem", "model", "FDA_results.RData"),
        fig_num   = 16,
        freq_tag  = "ACC stability selection (high-GBA removed)",
        beta_tag  = "GBA effect on ACC (high-GBA removed)"),
   list(branch    = "gba_binary",
-       subdir    = "rand_norm_wei_ACC_stabsel_11-100_gba_binary",
+       subdir = "gba_binary",
        gba_term  = "globalcatmod",
        fig_num   = 17,
        freq_tag  = "ACC stability selection (GBA binary)",
        beta_tag  = "GBA (binary) effect on ACC")
 )
 
-stabsel_root6 <- file.path(repo_root, "results", "fda_stability_selection", "ACC_sensitivity")
+stabsel_root6 <- file.path(stabsel_root, "ACC_sensitivity")
 rdata_name6   <- "rand_norm_wei_ACC_stabsel_results.RData"
 
 for (b in n6_branches) {
@@ -1909,9 +1956,14 @@ for (b in n6_branches) {
   
   # Panel B: GBA beta(d) from the post-selection fit
   beta_panel <- NULL
-  if (!is.null(env$bootstrap_coefs)) {
+  beta_env <- env
+  if (is.null(env$bootstrap_coefs) && !is.null(b$refit_rdata) && file.exists(b$refit_rdata)) {
+    beta_env <- new.env(); load(b$refit_rdata, envir = beta_env)
+    cat("  GBA not stably selected: panel B from the separate full-sample model\n")
+  }
+  if (!is.null(beta_env$bootstrap_coefs)) {
     beta_df <- tryCatch(
-      extract_beta_curve6(env, b$gba_term, model_obj_name = "pffr_final"),
+      extract_beta_curve6(beta_env, b$gba_term),
       error = function(e) { cat(sprintf("  [warn] beta extract failed: %s\n", conditionMessage(e))); NULL })
     if (!is.null(beta_df)) {
       cat(sprintf("  GBA beta(d): direction %s, CI %s\n",
@@ -1922,7 +1974,7 @@ for (b in n6_branches) {
     cat("  [warn] bootstrap_coefs is NULL; panel B omitted\n")
   }
   
-  fig <- if (!is.null(beta_panel)) (freq_panel | beta_panel) else freq_panel
+  fig <- if (!is.null(beta_panel)) (freq_panel | wrap_elements(full = beta_panel)) else freq_panel
   save_fig(fig, sprintf("SuppFig%d_ACC_stabsel_%s", b$fig_num, b$branch),
            width_in = 10, height_in = 4.5)
   cat("\n")
@@ -1935,19 +1987,111 @@ cat("========================================\n")
 
 # ============================================================================
 # ============================================================================
-# SUPPLEMENTARY NOTE 7: SHARED-SEVERITY ASSESSMENT FRAMEWORK
+# SUPPLEMENTARY NOTE 7: STABILITY SELECTION PARAMETER SENSITIVITY ANALYSES
 #
-#   Supplementary Figure 18 - Inter-exposure correlation heatmap
-#   Supplementary Figure 19 - PCA scree (A) + PC1/PC2 loadings (B)
-#   Supplementary Figure 20 - 8-panel scatterplots: exposure PC1 vs FPC1/FPC2
+#   Supplementary Figure 18 - Selection frequency of each exposure across
+#                             A) subsample proportion (50/60/70/80%) and
+#                             B) FPC retention threshold (90/95/99/99.5%),
+#                             all at 200 iterations; 70% threshold line.
+#
+# Reads the long-format summary written by
+# code/05_supplemental/note7_stability_selection_sensitivity.R --summarize
+# (results/stability_selection_sensitivity/sensitivity_selection_frequencies.csv).
+# This builder only styles; it performs no analysis. Kendall's W (rank
+# concordance across all 8 configurations, incl. the 100-iteration primary run)
+# is printed to the console for the Note 7 text / figure legend.
+# ============================================================================
+# ============================================================================
+
+cat("\n========================================\n")
+cat("Note 7: Stability Selection Parameter Sensitivity\n")
+cat("========================================\n\n")
+
+n7s_csv <- file.path(stabsens_root, "sensitivity_selection_frequencies.csv")
+
+n7s_metric_lab <- c(strength = "Strength", GE_norm = "GE", ACC_norm = "ACC", SW = "SW")
+n7s_exp_lab <- c(bpd2 = "BPD", bw_z_new = "BWZ", ga = "GA", globalbrainscore2 = "GBA",
+                 anyrop = "ROP", sepsis2 = "Sepsis", anyivh = "IVH",
+                 hydrocephalus_dc = "Hydrocephalus")
+n7s_pal <- c(BPD = "#E69F00", BWZ = "#56B4E9", GA = "#009E73", GBA = "#000000",
+             ROP = "#0072B2", Sepsis = "#D55E00", IVH = "#CC79A7", Hydrocephalus = "#999999")
+
+cat("--- Building Supplementary Figure 18 (stability selection parameter sensitivity) ---\n")
+
+if (file.exists(n7s_csv)) {
+  n7s <- read.csv(n7s_csv, stringsAsFactors = FALSE)
+  n7s$pct      <- 100 * n7s$selection_frequency
+  n7s$Metric   <- factor(n7s_metric_lab[n7s$metric], levels = n7s_metric_lab)
+  n7s$Exposure <- factor(n7s_exp_lab[n7s$exposure], levels = n7s_exp_lab)
+
+  # Kendall's W across all configurations (no tie correction), per metric
+  for (m in levels(n7s$Metric)) {
+    w <- reshape(n7s[n7s$Metric == m, c("Exposure", "config", "pct")],
+                 idvar = "Exposure", timevar = "config", direction = "wide")
+    R <- apply(as.matrix(w[, -1]), 2, function(x) rank(-x))
+    S <- sum((rowSums(R) - mean(rowSums(R)))^2)
+    cat(sprintf("  Kendall's W, %-8s: %.3f (%d configurations)\n",
+                m, 12 * S / (ncol(R)^2 * (nrow(R)^3 - nrow(R))), ncol(R)))
+  }
+
+  n7s_panel <- function(d, xlab, panel_letter, discrete_x = FALSE) {
+    p <- ggplot(d, aes(x, pct, colour = Exposure, group = Exposure)) +
+      geom_hline(yintercept = stability_threshold * 100, lty = "dashed", colour = "grey40") +
+      geom_line(linewidth = 0.7) + geom_point(size = 1.4) +
+      facet_wrap(~ Metric, nrow = 1) +
+      scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+      scale_colour_manual(values = n7s_pal) +
+      labs(title = panel_letter, x = xlab, y = "Selection frequency (%)", colour = NULL) +
+      theme_classic(base_size = 10) +
+      theme(strip.background = element_blank(), strip.text = element_text(face = "bold"),
+            plot.title = element_text(face = "bold"), legend.position = "bottom")
+    if (!discrete_x) p <- p + scale_x_continuous(breaks = c(50, 60, 70, 80))
+    p
+  }
+
+  # A) Subsample proportion (200 iterations, 99.5% PVE)
+  sub_map <- c("splits200_sub0.50" = 50, "splits200" = 60,
+               "splits200_sub0.70" = 70, "splits200_sub0.80" = 80)
+  dA <- n7s[n7s$config %in% names(sub_map), ]
+  dA$x <- sub_map[dA$config]
+
+  # B) FPC retention threshold (200 iterations, 60% subsamples)
+  pve_map <- c("splits200_pve0.90" = "90", "splits200_pve0.95" = "95",
+               "splits200_pve0.99" = "99", "splits200" = "99.5")
+  dB <- n7s[n7s$config %in% names(pve_map), ]
+  dB$x <- factor(pve_map[dB$config], levels = c("90", "95", "99", "99.5"))
+
+  if (nrow(dA) != 4 * 4 * 8 || nrow(dB) != 4 * 4 * 8)
+    cat(sprintf("  [warn] expected 128 rows per panel; got A=%d, B=%d\n", nrow(dA), nrow(dB)))
+
+  p_fig18 <- (n7s_panel(dA, "Subsample fraction (%)", "A") /
+              n7s_panel(dB, "FPC retention threshold (% variance explained)", "B", discrete_x = TRUE)) +
+    plot_layout(guides = "collect") & theme(legend.position = "bottom")
+  save_fig(p_fig18, "SuppFig18_stabsel_parameter_sensitivity", width_in = 10, height_in = 6.5)
+} else {
+  cat(sprintf("  [missing] %s\n", n7s_csv))
+}
+
+cat("\n========================================\n")
+cat("Note 7: DONE\n")
+cat("========================================\n")
+
+
+# ============================================================================
+# ============================================================================
+# SUPPLEMENTARY NOTE 8: SHARED-SEVERITY ASSESSMENT FRAMEWORK
+#
+#   Supplementary Figure 19 - Inter-exposure correlation heatmap
+#   Supplementary Figure 20 - PCA scree (A) + PC1/PC2 loadings (B)
+#   Supplementary Figure 21 - 8-panel scatterplots: exposure PC1 vs FPC1/FPC2
 #                             per metric
-#   Supplementary Figure 21 - 3-panel permutation results
+#   Supplementary Figure 22 - 3-panel permutation results
 #                             (A=global, B=incremental heatmap, C=latent severity)
 #   Supplementary Table 7   - Permutation test results (3 tests x metrics)
 #
 # Reads committed outputs from the standalone analysis script
 # (note7_shared_severity_analysis.R), in results/post_lasso_shared_severity/.
-# This builder only styles; it performs no analysis. Fig 20 reads the
+# This builder only styles; it performs no analysis. Fig 21 reads the
 # precomputed per-subject PC1_FPC_scores.csv (no in-builder FPCA).
 #
 # Reads the precomputed per-subject PC1/FPC scores to render the panels.
@@ -1955,10 +2099,10 @@ cat("========================================\n")
 # ============================================================================
 
 cat("\n========================================\n")
-cat("Note 7: Shared-Severity Assessment Framework\n")
+cat("Note 8: Shared-Severity Assessment Framework\n")
 cat("========================================\n\n")
 
-n7_root <- file.path(repo_root, "results", "post_lasso_shared_severity")
+n7_root <- severity_root
 
 # Map the analysis script's display labels -> manuscript-consistent labels.
 n7_relabel <- c(
@@ -1967,15 +2111,17 @@ n7_relabel <- c(
   "Gestational Age" = "GA",
   "GBS2"           = "GBA",
   "ROP"            = "ROP",
-  "Sepsis"         = "Sepsis"
+  "Sepsis"         = "Sepsis",
+  "IVH"            = "IVH",
+  "Hydrocephalus"  = "Hydrocephalus"
 )
-n7_exposure_levels <- c("BPD", "BWZ", "GA", "GBA", "ROP", "Sepsis")
+n7_exposure_levels <- c("BPD", "BWZ", "GA", "GBA", "ROP", "Sepsis", "IVH", "Hydrocephalus")
 n7_metric_levels   <- c("Strength", "Normalized GE", "Normalized ACC", "Small-Worldness")
 
 # ----------------------------------------------------------------------------
-# Supplementary Figure 18: Inter-exposure correlation heatmap
+# Supplementary Figure 19: Inter-exposure correlation heatmap
 # ----------------------------------------------------------------------------
-cat("--- Building Supplementary Figure 18 (correlation heatmap) ---\n")
+cat("--- Building Supplementary Figure 19 (correlation heatmap) ---\n")
 
 corr_csv <- file.path(n7_root, "exposure_correlation_matrix.csv")
 if (file.exists(corr_csv)) {
@@ -1992,26 +2138,26 @@ if (file.exists(corr_csv)) {
     pivot_longer(-Var1, names_to = "Var2", values_to = "r") %>%
     mutate(Var1 = factor(Var1, levels = rownames(corr_df_raw)),
            Var2 = factor(Var2, levels = colnames(corr_df_raw)))
-  p_fig18 <- ggplot(corr_long, aes(x = Var2, y = Var1, fill = r)) +
+  p_fig19 <- ggplot(corr_long, aes(x = Var2, y = Var1, fill = r)) +
     geom_tile(color = "white", linewidth = 0.5) +
     geom_text(aes(label = sprintf("%.2f", r)), size = 3.2, color = "black") +
     scale_fill_gradient2(low = "#1F77B4", mid = "white", high = "#D62728",
                          midpoint = 0, limits = c(-1, 1), name = "Pearson r") +
     coord_fixed() +
     labs(x = NULL, y = NULL,
-         title = "Supplementary Figure 18. Inter-exposure correlation matrix") +
+         title = "Supplementary Figure 19. Inter-exposure correlation matrix") +
     theme_supp() +
-    theme(axis.text.x = element_text(angle = 0))
-  save_fig(p_fig18, "SuppFig18_exposure_correlation_heatmap",
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  save_fig(p_fig19, "SuppFig19_exposure_correlation_heatmap",
            width_in = 6.5, height_in = 5.5)
 } else {
   cat(sprintf("  [missing] %s\n", corr_csv))
 }
 
 # ----------------------------------------------------------------------------
-# Supplementary Figure 19: PCA scree (A) + PC1/PC2 loadings (B)
+# Supplementary Figure 20: PCA scree (A) + PC1/PC2 loadings (B)
 # ----------------------------------------------------------------------------
-cat("\n--- Building Supplementary Figure 19 (PCA scree + loadings) ---\n")
+cat("\n--- Building Supplementary Figure 20 (PCA scree + loadings) ---\n")
 
 pca_var_csv  <- file.path(n7_root, "exposure_pca_variance.csv")
 pca_load_csv <- file.path(n7_root, "exposure_pca_loadings.csv")
@@ -2022,7 +2168,7 @@ if (file.exists(pca_var_csv) && file.exists(pca_load_csv)) {
                               n7_relabel[pca_load$Exposure], pca_load$Exposure)
   
   # Panel A: scree (bars = per-PC variance; dashed red line = cumulative)
-  p19_A <- ggplot(pca_var, aes(x = PC, y = Variance_Explained, group = 1)) +
+  p20_A <- ggplot(pca_var, aes(x = PC, y = Variance_Explained, group = 1)) +
     geom_col(fill = "#1F77B4", alpha = 0.7, width = 0.6) +
     geom_line(aes(y = Cumulative), color = "#D62728", linewidth = 0.8,
               linetype = "dashed") +
@@ -2042,7 +2188,7 @@ if (file.exists(pca_var_csv) && file.exists(pca_load_csv)) {
       dplyr::select(Exposure, PC1, PC2) %>%
       pivot_longer(c(PC1, PC2), names_to = "PC", values_to = "loading") %>%
       mutate(Exposure = factor(Exposure, levels = n7_exposure_levels))
-    p19_B <- ggplot(load_long, aes(x = Exposure, y = loading, fill = PC)) +
+    p20_B <- ggplot(load_long, aes(x = Exposure, y = loading, fill = PC)) +
       geom_col(position = position_dodge(width = 0.7), width = 0.65, alpha = 0.85) +
       geom_hline(yintercept = 0, color = "grey40", linewidth = 0.4) +
       scale_fill_manual(values = c("PC1" = "#1F77B4", "PC2" = "#FF7F0E")) +
@@ -2050,25 +2196,26 @@ if (file.exists(pca_var_csv) && file.exists(pca_load_csv)) {
            subtitle = "PC1 = latent severity axis", fill = NULL) +
       theme_supp() +
       theme(legend.position = "top",
-            plot.title = element_text(face = "bold", hjust = 0))
+            plot.title = element_text(face = "bold", hjust = 0),
+            axis.text.x = element_text(angle = 45, hjust = 1))
   } else {
-    p19_B <- patchwork::plot_spacer()
+    p20_B <- patchwork::plot_spacer()
   }
   
-  combined_19 <- (p19_A | p19_B) +
+  combined_20 <- (p20_A | p20_B) +
     patchwork::plot_annotation(
-      title = "Supplementary Figure 19. Principal component analysis of exposure set",
+      title = "Supplementary Figure 20. Principal component analysis of exposure set",
       theme = theme(plot.title = element_text(size = 12, face = "bold")))
-  save_fig(combined_19, "SuppFig19_exposure_PCA", width_in = 9.5, height_in = 4.5)
+  save_fig(combined_20, "SuppFig20_exposure_PCA", width_in = 9.5, height_in = 4.5)
 } else {
   cat("  [missing] PCA CSVs\n")
 }
 
 # ----------------------------------------------------------------------------
-# Supplementary Figure 20: 8-panel PC1 vs FPC1/FPC2 scatterplots per metric
+# Supplementary Figure 21: 8-panel PC1 vs FPC1/FPC2 scatterplots per metric
 # Reads precomputed PC1_FPC_scores.csv (no in-builder FPCA).
 # ----------------------------------------------------------------------------
-cat("\n--- Building Supplementary Figure 20 (PC1 vs FPC scatterplots) ---\n")
+cat("\n--- Building Supplementary Figure 21 (PC1 vs FPC scatterplots) ---\n")
 
 scores_csv <- file.path(n7_root, "PC1_FPC_scores.csv")
 if (file.exists(scores_csv)) {
@@ -2113,11 +2260,9 @@ if (file.exists(scores_csv)) {
       geom_point(alpha = 0.55, color = "#1F77B4", size = 1.6) +
       geom_smooth(method = "lm", se = TRUE, color = "#D62728",
                   fill = "#D62728", alpha = 0.18, linewidth = 0.7, formula = y ~ x) +
-      annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.4,
-               label = r_lab, size = 3, color = "grey20") +
       labs(x = "Exposure PC1 (latent severity)", y = fpc_col,
            title = sprintf("%s. %s vs. PC1", fpc_letter, fpc_col),
-           subtitle = metric_lab) +
+           subtitle = paste0(metric_lab, ": ", r_lab)) +
       theme_supp() +
       theme(plot.title = element_text(face = "bold", hjust = 0),
             plot.subtitle = element_text(size = 9, color = "grey30"))
@@ -2129,20 +2274,20 @@ if (file.exists(scores_csv)) {
     panels[[length(panels) + 1]] <- build_scatter_panel(n7_scores_long, "FPC1", ml, panel_letters[li]); li <- li + 1
     panels[[length(panels) + 1]] <- build_scatter_panel(n7_scores_long, "FPC2", ml, panel_letters[li]); li <- li + 1
   }
-  combined_20 <- patchwork::wrap_plots(panels, ncol = 2) +
+  combined_21 <- patchwork::wrap_plots(panels, ncol = 2) +
     patchwork::plot_annotation(
-      title = "Supplementary Figure 20. Exposure PC1 vs FPC scores per graph metric",
+      title = "Supplementary Figure 21. Exposure PC1 vs FPC scores per graph metric",
       theme = theme(plot.title = element_text(size = 12, face = "bold")))
-  save_fig(combined_20, "SuppFig20_PC1_vs_FPC_scatterplots", width_in = 9.5, height_in = 13)
+  save_fig(combined_21, "SuppFig21_PC1_vs_FPC_scatterplots", width_in = 9.5, height_in = 13)
 } else {
   cat(sprintf("  [missing] %s\n", scores_csv))
 }
 
 # ----------------------------------------------------------------------------
-# Supplementary Figure 21: 3-panel permutation results
+# Supplementary Figure 22: 3-panel permutation results
 # A = global, B = incremental heatmap, C = latent severity
 # ----------------------------------------------------------------------------
-cat("\n--- Building Supplementary Figure 21 (permutation results 3-panel) ---\n")
+cat("\n--- Building Supplementary Figure 22 (permutation results 3-panel) ---\n")
 
 global_csv <- file.path(n7_root, "perm_global_exposure_set_by_metric.csv")
 inc_csv    <- file.path(n7_root, "perm_incremental_exposure_by_metric.csv")
@@ -2189,14 +2334,14 @@ build_perm_panel <- function(df, value_col, panel_letter, panel_title, panel_sub
           plot.subtitle = element_text(size = 9, color = "grey30"))
 }
 
-p21_A <- build_perm_panel(global_df, "p_global_perm", "A", "Global exposure set",
+p22_A <- build_perm_panel(global_df, "p_global_perm", "A", "Global exposure set",
                           "Joint association of all exposures with FPCA scores")
 if (!is.null(inc_df) && "p_inc_perm" %in% names(inc_df)) {
   inc_plot_df <- inc_df %>%
     mutate(p_val = pmax(as.numeric(p_inc_perm), 1e-4),
            logp  = -log10(p_val),
            p_label = ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val)))
-  p21_B <- ggplot(inc_plot_df, aes(x = exposure_label, y = metric_label, fill = logp)) +
+  p22_B <- ggplot(inc_plot_df, aes(x = exposure_label, y = metric_label, fill = logp)) +
     geom_tile(color = "white", linewidth = 0.5) +
     geom_text(aes(label = p_label), size = 3) +
     scale_fill_gradient(low = "white", high = "#1F4E79", name = expression(-log[10](p))) +
@@ -2205,19 +2350,19 @@ if (!is.null(inc_df) && "p_inc_perm" %in% names(inc_df)) {
     theme_supp() +
     theme(plot.title = element_text(face = "bold", hjust = 0),
           plot.subtitle = element_text(size = 9, color = "grey30"),
-          axis.text.x = element_text(angle = 0))
+          axis.text.x = element_text(angle = 45, hjust = 1))
 } else {
-  p21_B <- patchwork::plot_spacer()
+  p22_B <- patchwork::plot_spacer()
 }
-p21_C <- build_perm_panel(latent_df, "p_severity_perm", "C", "Latent severity (PC1)",
+p22_C <- build_perm_panel(latent_df, "p_severity_perm", "C", "Latent severity (PC1)",
                           "Single-axis exposure summary")
 
-combined_21perm <- (p21_A | p21_B) / (p21_C | patchwork::plot_spacer()) +
+combined_22perm <- (p22_A | p22_B) / (p22_C | patchwork::plot_spacer()) +
   patchwork::plot_layout(heights = c(1, 1)) +
   patchwork::plot_annotation(
-    title = "Supplementary Figure 21. Permutation-based exposure-metric association tests",
+    title = "Supplementary Figure 22. Permutation-based exposure-metric association tests",
     theme = theme(plot.title = element_text(size = 12, face = "bold")))
-save_fig(combined_21perm, "SuppFig21_permutation_results", width_in = 11, height_in = 8)
+save_fig(combined_22perm, "SuppFig22_permutation_results", width_in = 11, height_in = 8)
 
 # ----------------------------------------------------------------------------
 # Supplementary Table 7: Combined permutation results
@@ -2268,5 +2413,5 @@ if (length(n7_table7_rows) > 0) {
 }
 
 cat("\n========================================\n")
-cat("Note 7: DONE\n")
+cat("Note 8: DONE\n")
 cat("========================================\n")

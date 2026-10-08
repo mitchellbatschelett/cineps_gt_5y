@@ -1,5 +1,5 @@
 "metric","metric_label","K","achieved_cumPVE","T_global","p_global_perm","N"
-"rand_norm_wei_ACC","Clustering (ACC)",5,0.997621321324131,6.29393807336683,0.000999,171
-"rand_norm_wei_SW","Small-Worldness (SW)",5,0.995390983446654,218.187492350892,0.022,169
-"str","Strength",3,0.999991587450297,1674.21736896937,0.024,169
-"rand_norm_wei_GE","Global Efficiency (GE)",3,0.995891491826427,0.46012335436942,0.0899,170
+"str","Strength",3,0.999990409661446,2141.7845556418,0.000999,171
+"rand_norm_wei_ACC","Clustering (ACC)",5,0.996942164413805,5.44648739780392,0.00699,171
+"rand_norm_wei_GE","Global Efficiency (GE)",3,0.996034084976574,0.65685594983814,0.0509,169
+"rand_norm_wei_SW","Small-Worldness (SW)",6,0.9966195185057,1383.17218063015,0.191,171

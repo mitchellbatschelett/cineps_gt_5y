@@ -1,0 +1,3 @@
+"Predictor","Label","Test_Statistic","Test_Type","p_value","functional_ve","semi_partial_r"
+"Group","Group (VPT vs FT)",801.27633334179,"F",5.80907027636887e-187,0.0170280894302471,0.076245602180084
+"eTIV","eTIV",57314.3640202151,"F",0,0.469698872824737,0.677114628768344

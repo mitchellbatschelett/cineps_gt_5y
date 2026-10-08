@@ -1,7 +1,9 @@
 "exposure","label","cluster"
 "bpd2","BPD",1
-"bw_z","Birth Weight Z",2
+"bw_z_new","Birth Weight Z",1
 "ga","Gestational Age",1
-"globalbrainscore2","GBS2",2
+"globalbrainscore2","GBS2",1
 "anyrop","ROP",1
 "sepsis2","Sepsis",1
+"anyivh","IVH",2
+"hydrocephalus_dc","Hydrocephalus",2

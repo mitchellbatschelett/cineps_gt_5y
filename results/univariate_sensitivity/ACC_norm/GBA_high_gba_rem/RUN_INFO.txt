@@ -1,0 +1,17 @@
+Index:          29
+Pipeline:       repol
+Analysis:       univariate
+Metric:         Normalized ACC (rand_norm_wei_ACC)
+Model:          Exposure: GBA (sqrt) (fully adjusted)
+Predictors:     globalbrainscore2, eTIV, sex, sriskscore, age_at_5y_mri, repol_rel_rms_mean
+z-scored:       globalbrainscore2, eTIV, sriskscore, age_at_5y_mri, repol_rel_rms_mean
+Not scaled:     sex
+GBA sqrt:       TRUE
+Family:         gaussian
+Density range:  11-100% (357 points)
+Excluded IDs:   354, 559, 332, 650
+N:              167 (of 171 in file)
+Bootstrap:      1000 iterations
+Data file:      /scratch/bath3l/FDA_analysis/Data/cohort_171VPT_postVQC_repol_cUS.xlsx
+Started:        2026-10-05 11:43:17
+Host:           rit-r760xa-01.chmcres.cchmc.org

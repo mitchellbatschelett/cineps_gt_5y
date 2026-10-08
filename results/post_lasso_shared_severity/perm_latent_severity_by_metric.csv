@@ -1,5 +1,5 @@
 "metric","metric_label","K","achieved_cumPVE","T_severity","p_severity_perm","N","exposure_pc1_pve"
-"str","Strength",3,0.999991587450297,1070.822705333,0.000999,169,44.3
-"rand_norm_wei_SW","Small-Worldness (SW)",5,0.995390983446654,160.986061978209,0.000999,169,44.3
-"rand_norm_wei_ACC","Clustering (ACC)",5,0.997621321324131,2.10764542770341,0.011,171,44.3
-"rand_norm_wei_GE","Global Efficiency (GE)",3,0.995891491826427,0.0993487613106867,0.115,170,44.3
+"rand_norm_wei_ACC","Clustering (ACC)",5,0.996942164413805,3.67980238727892,0.000999,171,36
+"rand_norm_wei_SW","Small-Worldness (SW)",6,0.9966195185057,1005.19470586251,0.003,171,36
+"str","Strength",3,0.999990409661446,464.622396714499,0.016,171,36
+"rand_norm_wei_GE","Global Efficiency (GE)",3,0.996034084976574,0.0676962942195902,0.2,169,36

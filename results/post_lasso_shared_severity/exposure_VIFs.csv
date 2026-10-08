@@ -1,7 +1,9 @@
 "Exposure","VIF"
-"Gestational Age",3.16
-"ROP",2.12
-"BPD",2.02
-"Sepsis",1.28
-"Birth Weight Z",1.25
-"GBS2",1.25
+"IVH",3.67
+"Hydrocephalus",3.64
+"Gestational Age",3.17
+"ROP",2.16
+"BPD",2.08
+"GBS2",1.32
+"Sepsis",1.27
+"Birth Weight Z",1.26

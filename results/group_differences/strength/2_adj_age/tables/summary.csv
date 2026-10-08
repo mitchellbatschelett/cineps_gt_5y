@@ -1,0 +1,2 @@
+"Index","Pipeline","Analysis","Metric","Metric_Label","Model","Predictors","Family","Density_Range","N_Original","N_Excluded_IDs","N_Final","N_Depth_Flagged","GBA_Sqrt_Applied","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold","Bootstrap_Completed"
+2,"repol","group_differences","str","Strength","Adjusted: age","Group, age_at_5y_mri","gaussian","11-100%",216,0,216,11,FALSE,0.110030089544845,0.036022666700839,"R^2",2.67450373119691,"F",0.0192118654350632,FALSE,0.001,TRUE
