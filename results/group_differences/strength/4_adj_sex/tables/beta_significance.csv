@@ -1,4 +1,0 @@
-"term","label","bootstrap_term","significant","ci_excludes_zero_ranges","pct_density_significant","direction_in_sig_region","mean_beta"
-"Intercept","Intercept","Intercept(densities)",TRUE,"11-34.4%, 36.2-100%",99,"negative",-0.004984310669931
-"Group","Group (VPT vs FT)","Group(densities)",TRUE,"11-100%",100,"negative",-0.55421445283179
-"sex","Sex","sex(densities)",TRUE,"11-100%",100,"negative",-0.951866641039688

@@ -1,4 +1,0 @@
-"term","label","bootstrap_term","significant","ci_excludes_zero_ranges","pct_density_significant","direction_in_sig_region","mean_beta"
-"Intercept","Intercept","Intercept(densities)",TRUE,"11-100%",100,"positive",0.00316395275666845
-"Group","Group (VPT vs FT)","Group(densities)",TRUE,"16.4-100%",94,"positive",0.0207159146233547
-"repol_rel_rms_mean","Motion (eddy relative RMS)","repol_rel_rms_mean(densities)",FALSE,"ns",0,NA,-0.00191961033320174

@@ -1,4 +1,0 @@
-"term","label","bootstrap_term","significant","ci_excludes_zero_ranges","pct_density_significant","direction_in_sig_region","mean_beta"
-"Intercept","Intercept","Intercept(densities)",TRUE,"11-16.4%, 18.2-53.3%, 56.8-100%",96,"negative",-0.000242395037756785
-"Group","Group (VPT vs FT)","Group(densities)",FALSE,"ns",0,NA,-0.00440444628332004
-"age_at_5y_mri","Age at MRI","age_at_5y_mri(densities)",FALSE,"ns",0,NA,-0.000762674652114201

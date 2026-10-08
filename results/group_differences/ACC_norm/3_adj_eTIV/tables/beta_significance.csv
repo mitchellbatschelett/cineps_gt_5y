@@ -1,4 +1,0 @@
-"term","label","bootstrap_term","significant","ci_excludes_zero_ranges","pct_density_significant","direction_in_sig_region","mean_beta"
-"Intercept","Intercept","Intercept(densities)",TRUE,"11-100%",100,"positive",0.00315560719936775
-"Group","Group (VPT vs FT)","Group(densities)",TRUE,"11-100%",100,"positive",0.0218486180055728
-"eTIV","eTIV","eTIV(densities)",TRUE,"11-100%",100,"positive",0.0131228505138912

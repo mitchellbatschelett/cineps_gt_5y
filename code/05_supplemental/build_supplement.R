@@ -2090,7 +2090,7 @@ cat("========================================\n")
 #   Supplementary Table 7   - Permutation test results (3 tests x metrics)
 #
 # Reads committed outputs from the standalone analysis script
-# (note7_shared_severity_analysis.R), in results/post_lasso_shared_severity/.
+# (code/05_supplemental/note8_shared_severity_analysis.R), in results/post_lasso_shared_severity/.
 # This builder only styles; it performs no analysis. Fig 21 reads the
 # precomputed per-subject PC1_FPC_scores.csv (no in-builder FPCA).
 #

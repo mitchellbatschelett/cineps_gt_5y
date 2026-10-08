@@ -931,7 +931,7 @@ cat("========================================\n\n")
 
 # --- Metric specs -----------------------------------------------------------
 # folder_subdir is relative to fda_stabsel_root; rdata_filename comes from the
-# pipeline's save() call (see FOUR_fda_stability_selection_pipeline.R line 1009).
+# pipeline's save() call (see the end of FOUR_fda_stability_selection_pipeline.R).
 stabsel_specs <- list(
   ACC = list(
     folder_subdir  = "ACC_norm",
