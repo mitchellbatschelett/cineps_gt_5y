@@ -1,0 +1,9 @@
+"exposure","selection_frequency","n_successful"
+"bpd2",0.08,200
+"bw_z_new",0.075,200
+"ga",0.625,200
+"globalbrainscore2",0.335,200
+"anyrop",0.495,200
+"sepsis2",0.1,200
+"anyivh",0.235,200
+"hydrocephalus_dc",0.065,200

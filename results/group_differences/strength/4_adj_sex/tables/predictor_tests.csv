@@ -1,0 +1,3 @@
+"Predictor","Label","Test_Statistic","Test_Type","p_value","functional_ve","semi_partial_r"
+"Group","Group (VPT vs FT)",538.876488210998,"F",0,0.0358882843412682,0.159917944213094
+"sex","Sex",5597.38983850583,"F",0,0.130705361639998,0.336320435873963

@@ -1,44 +1,41 @@
 ################################################################################
 #                                                                              #
-#   CINEPS GT MANUSCRIPT - MAIN RESULTS FIGURES & TABLES                       #
+#   CINEPS GT MANUSCRIPT (NeuroImage revision) - MAIN FIGURES & TABLES         #
 #                                                                              #
-#   Generates the main-text figures (2-5) and tables (1-3) for the manuscript. #
-#   Figure 1 is produced directly by ONE_density_group_difference.R and is    #
-#   referenced here only for completeness; no rebuild logic is included.       #
+#   Reproduces main-text Tables 1-3 and Figures 2-5 as they appear in the      #
+#   revised manuscript.                                                        #
+#   Figure 1 is produced by ONE_density_group_difference.R.                    #
 #                                                                              #
 #   STRUCTURE                                                                  #
 #     Section 0:  Configuration (paths, libraries, plot theme, STRICT flag)    #
 #     Section 1:  Helpers (RData loading, beta extraction, CI utilities)       #
-#     Section 2:  Data loading + preprocessing                                 #
-#     Section 3:  Table 1 - Participant Characteristics                        #
+#     Section 2:  Data loading                                                 #
+#     Section 3:  Table 1 - Demographic and Clinical Characteristics           #
 #     Section 4:  Table 2 + Figure 2 - VPT vs FT Group Differences             #
 #     Section 5:  Table 3 + Figures 3-5 - Stability Selection                  #
 #                                                                              #
-#   Each section is self-contained and can be run in isolation after Sections  #
-#   0-2 are sourced.                                                           #
+#   INPUTS                                                                     #
+#     data/analysis_ready/cohort_171VPT_45FT_postVQC.xlsx  (cohort, 216)       #
+#     data/demographic_clinical/VPT_inclusion_comparison.xlsx                  #
+#         (395 enrolled VPT; Table 1 included vs not included)                 #
+#     results/group_differences/{strength,GE_norm,ACC_norm,SW}/                #
+#         {1_unadjusted,6_fully_adjusted}/model/FDA_results.RData              #
+#     results/stability_selection/{ACC_norm,strength,GE_norm,SW}/              #
+#         *_stabsel_results.RData                                              #
 #                                                                              #
-#   DEPENDENCIES                                                               #
-#     - data/analysis_ready/cohort_171VPT_45FT_postVQC.xlsx                    #
-#     - results/density_group_difference/density_sensitivity_results.xlsx      #
-#     - results/fda_group_differences/{metric}_FDA_{...}/                      #
-#         {metric}_FDA_results.RData  (12 directories, 4 metrics x 2 configs)  #
-#     - results/fda_stability_selection/{metric}_stabsel_11-100/               #
-#         {metric}_stabsel_results.RData  (4 main-run directories)             #
-#                                                                              #
-#   OUTPUTS                                                                    #
-#     - tables/main/Table_1_participant_characteristics.csv                   #
-#     - tables/main/Table_2_group_differences.csv                             #
-#     - tables/main/Table_3_stability_selection.csv                           #
-#     - figures/main/Figure_2_group_difference_betas.{pdf,png}                 #
-#     - figures/main/Figure_3_ACC_stability_selection.{pdf,png}                #
-#     - figures/main/Figure_4_SW_stability_selection.{pdf,png}                 #
-#     - figures/main/Figure_5_GE_strength_stability.{pdf,png}                  #
+#   OUTPUTS (tables/main, figures/main)                                        #
+#     Table_1_participant_characteristics.csv                                  #
+#     Table_2_group_differences.csv                                            #
+#     Table_3_stability_selection.csv                                          #
+#     Figure_2_group_difference_betas.{pdf,png}                                #
+#     Figure_3_ACC_stability_selection.{pdf,png}                               #
+#     Figure_4_strength_stability_selection.{pdf,png}                          #
+#     Figure_5_GE_SW_stability.{pdf,png}                                       #
 #                                                                              #
 #   REQUIRES                                                                   #
-#     R 4.4.0; readxl, dplyr, tidyr, tibble, ggplot2, patchwork, refund, mgcv  #
+#     R 4.4.0; readxl, dplyr, tidyr, tibble, ggplot2, patchwork, mgcv          #
 #                                                                              #
 ################################################################################
-
 
 # ============================================================================ 
 # SECTION 0: CONFIGURATION
@@ -92,21 +89,19 @@ if (exists("repo_root", inherits = TRUE) && is.character(repo_root) &&
 }
 cat(sprintf("Repo root: %s\n", repo_root))
 
-# Demographic / clinical variables only - used by Table 1. Avoids loading the
-# 2800-column merged file just to compute participant characteristics.
-demo_path  <- file.path(repo_root, "data/demographic_clinical/demo_clinical_only.xlsx")
+# Analytic cohort (171 VPT + 45 FT; clinical + density-resolved GT metrics).
+data_path <- file.path(repo_root, "data", "analysis_ready", "cohort_171VPT_45FT_postVQC.xlsx")
 
-# Full analysis-ready cohort (clinical + GT density columns) - used by any
-# section that needs density-resolved metrics. Not needed by Table 1.
-data_path  <- file.path(repo_root, "data/analysis_ready/cohort_171VPT_45FT_postVQC.xlsx")
-density_xlsx <- file.path(repo_root,
-                          "results/density_group_difference/density_sensitivity_results.xlsx")
+# All 395 enrolled VPT with an `included` flag; Table 1 included vs not-included
+# comparison only (ID, included, ga, bw, sex, sriskscore, globalbrainscore2,
+# bpdgrade, anyrop, sepsis2, dwma_percent, anyivh, hydrocephalus_dc).
+incl_path <- file.path(repo_root, "data", "demographic_clinical", "VPT_inclusion_comparison.xlsx")
 
-fda_group_root <- file.path(repo_root, "results/fda_group_differences")
-fda_stabsel_root <- file.path(repo_root, "results/fda_stability_selection")
+fda_group_root   <- file.path(repo_root, "results", "group_differences")
+fda_stabsel_root <- file.path(repo_root, "results", "stability_selection")
 
-figures_out <- file.path(repo_root, "figures/main")
-tables_out  <- file.path(repo_root, "tables/main")
+figures_out <- file.path(repo_root, "figures", "main")
+tables_out  <- file.path(repo_root, "tables", "main")
 
 for (d in c(figures_out, tables_out)) {
   if (!dir.exists(d)) dir.create(d, recursive = TRUE)
@@ -124,7 +119,6 @@ suppressPackageStartupMessages({
   library(tibble)
   library(ggplot2)
   library(patchwork)
-  library(refund)    # pffr machinery; needed so plot.pffr dispatches
   library(mgcv)      # gaussian / scat families
 })
 
@@ -226,38 +220,7 @@ fmt_ve <- function(x, suffix = "") {
   paste0(sprintf("%.1f%%", pct), suffix)
 }
 
-# --- PFFR plotting helpers (getPlotObject / getCIsList) -----------------------
-# Reconstruct the same beta(density) curves and bootstrap CIs the per-run
-# pipeline plots produce, so the assembled panels match the individual outputs.
-
-get_plot_object <- function(model) {
-  # plot.gam() needs an open graphics device to return plot coordinates; use a
-  # throwaway svg() device. The captured plot data is independent of device choice.
-  ff <- tempfile()
-  svg(filename = ff)
-  po <- plot(model)
-  dev.off()
-  unlink(ff)
-  po
-}
-
-get_cis_list <- function(coefboot_bs) {
-  smList <- coefboot_bs$smterms
-  out <- vector("list", length(smList))
-  for (i in seq_along(smList)) {
-    out[[i]] <- list(
-      x        = smList[[i]][[2]],
-      y        = smList[[i]][[1]],
-      ci_lower = smList[[i]][["2.5%"]],
-      ci_upper = smList[[i]][["97.5%"]]
-    )
-  }
-  out
-}
-
 # --- Load RData into a fresh environment -------------------------------------
-# Avoids polluting the global namespace and lets a caller pull only the objects
-# it needs. Returns the environment.
 load_rdata <- function(path) {
   e <- new.env()
   load(path, envir = e)
@@ -269,44 +232,53 @@ load_rdata <- function(path) {
 # "globalbrainscore2(densities)", etc. Returns the 1-based index of the first
 # matching term, or NA_integer_ if none match.
 find_term_index <- function(term_names, predictor) {
-  # Strip "(...)" suffix for matching
   bare <- sub("\\(.*\\)$", "", term_names)
   idx <- which(bare == predictor)
-  if (length(idx) == 0) {
-    # Fallback: grep prefix match (handles edge cases like factor terms)
-    idx <- grep(paste0("^", predictor), term_names)
-  }
+  if (length(idx) == 0) idx <- grep(paste0("^", predictor), term_names)
   if (length(idx) == 0) return(NA_integer_)
   idx[1]
 }
 
 # --- Extract beta(density) curve + bootstrap CI for one predictor ------------
+# Reads the point estimate, density grid and 95% CI directly from the saved
+# bootstrap object (refund::coefboot.pffr), so no refitting or plotting of the
+# model is needed and the result does not depend on the installed mgcv/refund
+# version. Handles both storage formats written by coefboot.pffr:
+#   older refund (< 0.1-40): smterms[[i]] is a data.frame with the density
+#        grid, the estimate (`value`) and "2.5%" / "97.5%" quantile columns;
+#   newer refund (>= 0.1-40): smterms[[i]] holds `x` / `value`; CIs are in
+#        boot_ci$smterms[[i]][, "lower_95" / "upper_95"].
 # Returns a data.frame with columns: density, beta, ci_lower, ci_upper.
-extract_beta_curve <- function(env, predictor,
-                               model_obj_name = "pffr_fit") {
-  model <- env[[model_obj_name]]
-  if (is.null(model)) stop(sprintf("No %s in environment", model_obj_name))
-  if (is.null(env$bootstrap_coefs))
-    stop("No bootstrap_coefs in environment")
-  
-  term_names <- names(env$bootstrap_coefs$smterms)
+extract_beta_curve <- function(env, predictor, model_obj_name = NULL) {
+  bc <- env$bootstrap_coefs
+  if (is.null(bc)) stop("No bootstrap_coefs in environment")
+  term_names <- names(bc$smterms)
   idx <- find_term_index(term_names, predictor)
   if (is.na(idx)) {
     stop(sprintf("Predictor '%s' not found among terms: %s",
                  predictor, paste(term_names, collapse = ", ")))
   }
-  
-  po <- get_plot_object(model)
-  CIs <- get_cis_list(env$bootstrap_coefs)
-  
-  data.frame(
-    density  = po[[idx]]$x,
-    beta     = po[[idx]]$fit,
-    ci_lower = CIs[[idx]]$ci_lower,
-    ci_upper = CIs[[idx]]$ci_upper
-  )
+  boot_term_curve(bc, idx)
 }
 
+boot_term_curve <- function(bc, idx) {
+  sm <- bc$smterms[[idx]]
+  if (is.data.frame(sm) && all(c("2.5%", "97.5%") %in% names(sm))) {
+    other <- setdiff(names(sm), c("value", "se", "5%", "95%", "2.5%", "97.5%"))
+    grid  <- other[vapply(other, function(v) is.numeric(sm[[v]]) &&
+                            length(unique(sm[[v]])) > 1, logical(1))][1]
+    data.frame(density  = as.numeric(sm[[grid]]),
+               beta     = as.numeric(sm$value),
+               ci_lower = as.numeric(sm[["2.5%"]]),
+               ci_upper = as.numeric(sm[["97.5%"]]))
+  } else {
+    ci_m <- bc$boot_ci$smterms[[names(bc$smterms)[idx]]]
+    data.frame(density  = as.numeric(sm$x),
+               beta     = as.numeric(sm$value),
+               ci_lower = as.numeric(ci_m[, "lower_95"]),
+               ci_upper = as.numeric(ci_m[, "upper_95"]))
+  }
+}
 # --- Compute CI exclusion range ---------------------------------------------
 # Given a data.frame with density / ci_lower / ci_upper columns, returns a
 # formatted string like "45.2–100%", "11–27.2%", or "ns" (if zero is contained
@@ -331,7 +303,8 @@ ci_exclusion_range <- function(beta_df) {
   ends   <- cumsum(rle_obj$lengths)
   starts <- c(1L, head(ends, -1) + 1L)
   segs <- mapply(function(s, e, v) {
-    if (!isTRUE(v)) return(NULL)
+    # Single-density exclusions (s == e) are not reported
+    if (!isTRUE(v) || s == e) return(NULL)
     sprintf("%s–%s%%", fmt_density(d[s]), fmt_density(d[e]))
   }, starts, ends, rle_obj$values, SIMPLIFY = FALSE)
   segs <- Filter(Negate(is.null), segs)
@@ -347,297 +320,188 @@ fmt_density <- Vectorize(fmt_density, vectorize.args = "d")
 
 
 # ============================================================================ 
-# SECTION 2: DATA LOADING + PREPROCESSING
-# ============================================================================ 
-# We load only the demographic / clinical slice here. Table 1 needs nothing
-# beyond these columns. Sections that need density-resolved GT metrics will
-# load the full cohort xlsx (data_path) on demand.
-
-cat("\n========================================\n")
-cat("Loading demographic / clinical data\n")
-cat("========================================\n\n")
-
-require_input(demo_path, "demographic xlsx")
-df <- as.data.frame(read_excel(demo_path))
-cat(sprintf("Loaded: %d rows x %d cols\n", nrow(df), ncol(df)))
-
-# Group factor (Methods 2.1: Group == 1 -> VPT, Group == 0 -> FT)
-df$Group <- factor(df$Group, levels = c(0, 1), labels = c("FT", "VPT"))
-cat(sprintf("Group counts: %s\n",
-            paste(sprintf("%s = %d", levels(df$Group), table(df$Group)),
-                  collapse = ", ")))
-
-
-# ============================================================================ 
-# SECTION 3: TABLE 1 - PARTICIPANT CHARACTERISTICS
-# ============================================================================ 
-# Manuscript Table 1 (rows in order):
-#   Shared variables:
-#     GA at birth, weeks                Welch's t
-#     Sex (Male / Female counts)        Chi-square
-#     Corrected age at MRI, years       Welch's t
-#     Total Intracranial Volume, cm^3   Welch's t
-#     Relative Motion, mm               Welch's t
-#   VPT clinical variables (VPT only; FT column = "-"):
-#     Birth weight, grams               mean +/- SD
-#     Maternal social risk score        mean +/- SD
-#     Global brain abnormality score    median [IQR]
-#     BPD grade (No, 1, 2, 3)           count (%)
-#     ROP                               count (%)
-#     Sepsis                            count (%)
+# SECTION 2: DATA LOADING
 # ============================================================================ 
 
 cat("\n========================================\n")
-cat("Building Table 1 (Participant Characteristics)\n")
+cat("Loading data\n")
 cat("========================================\n\n")
 
-# Helper: Welch's t result formatted as desired
-welch_row <- function(varname, label, units, digits = 1) {
-  vpt <- df[[varname]][df$Group == "VPT"]
-  ft  <- df[[varname]][df$Group == "FT"]
-  vpt <- vpt[!is.na(vpt)]
-  ft  <- ft[!is.na(ft)]
-  if (length(vpt) == 0 || length(ft) == 0) {
-    return(list(VPT = NA_character_, FT = NA_character_, p = NA_character_))
-  }
-  tt <- t.test(vpt, ft)
+require_input(data_path, "analytic cohort xlsx")
+df <- as.data.frame(read_excel(data_path))
+cat(sprintf("Analytic cohort: %d rows x %d cols\n", nrow(df), ncol(df)))
+
+# Group: 1 = VPT, 0 = FT. Kept numeric; logical masks used below.
+is_vpt <- df$Group == 1
+is_ft  <- df$Group == 0
+n_vpt  <- sum(is_vpt)
+n_ft   <- sum(is_ft)
+cat(sprintf("Group counts: VPT = %d, FT = %d\n", n_vpt, n_ft))
+
+require_input(incl_path, "VPT inclusion comparison xlsx")
+incl <- as.data.frame(read_excel(incl_path, sheet = "data"))
+is_inc  <- incl$included == 1
+is_ninc <- incl$included == 0
+n_inc   <- sum(is_inc)
+n_ninc  <- sum(is_ninc)
+cat(sprintf("Enrolled VPT: %d (included = %d, not included = %d)\n",
+            nrow(incl), n_inc, n_ninc))
+
+# The included flag must identify exactly the analytic VPT sample.
+stopifnot(setequal(incl$ID[is_inc], df$ID[is_vpt]))
+
+
+# ============================================================================ 
+# SECTION 3: TABLE 1 - DEMOGRAPHIC AND CLINICAL CHARACTERISTICS
+# ============================================================================ 
+# Columns: VPT included | VPT not included | FT |
+#          p (VPT vs FT) | p (VPT included vs not included)
+#   VPT vs FT comparisons use the analytic cohort (df).
+#   Included vs not-included comparisons use the inclusion file (incl).
+# Tests: continuous = Welch's t (including GBA and DWMA, which are displayed
+#        as median [IQR]); categorical = chi-square (chisq.test default, i.e.
+#        Yates continuity correction for 2 x 2 tables).
+# Shared variables not collected for non-included children (age at MRI, TIV,
+# relative motion) are shown as em-dashes in the not-included column.
+# ============================================================================ 
+
+cat("\n========================================\n")
+cat("Building Table 1 (Demographic and Clinical Characteristics)\n")
+cat("========================================\n\n")
+
+DASH <- "—"
+
+mean_sd <- function(x, digits = 1) {
+  x <- x[!is.na(x)]
   fmt <- paste0("%.", digits, "f")
-  list(
-    label = sprintf("%s%s", label, if (nzchar(units)) sprintf(", %s", units) else ""),
-    VPT   = sprintf(paste0(fmt, " \u00b1 ", fmt), mean(vpt), sd(vpt)),
-    FT    = sprintf(paste0(fmt, " \u00b1 ", fmt), mean(ft),  sd(ft)),
-    p     = fmt_p(tt$p.value)
-  )
+  sprintf(paste0(fmt, " ± ", fmt), mean(x), sd(x))
 }
-
-# Helper: median [IQR] for a numeric variable (one group only)
 median_iqr <- function(x, digits = 1) {
   x <- x[!is.na(x)]
-  if (length(x) == 0) return(NA_character_)
   q <- quantile(x, c(0.25, 0.5, 0.75))
   fmt <- paste0("%.", digits, "f")
   sprintf(paste0(fmt, " [", fmt, ", ", fmt, "]"), q[2], q[1], q[3])
 }
-
-# Helper: count (pct) formatted "n (xx.x)"
-n_pct <- function(x, total) {
-  if (is.na(x) || is.na(total) || total == 0) return("-")
-  sprintf("%d (%.1f)", as.integer(x), 100 * x / total)
-}
-
-n_vpt <- sum(df$Group == "VPT")
-n_ft  <- sum(df$Group == "FT")
-
-# --- Build rows -------------------------------------------------------------
+n_pct <- function(k, total) sprintf("%d (%.1f)", as.integer(k), 100 * k / total)
+welch_p <- function(a, b) fmt_p(t.test(a, b)$p.value)
+chisq_p <- function(x, g) fmt_p(suppressWarnings(chisq.test(table(g, x)))$p.value)
 
 t1_rows <- list()
-
-# Shared variables header (in xlsx: italic / bold via styling)
-t1_rows[[length(t1_rows) + 1]] <- list(section = "shared",
-                                       Variable = "Shared variables",
-                                       VPT = "", FT = "", p = "")
-
-# GA at birth
-ga_row <- welch_row("ga", "GA at birth", "weeks", digits = 1)
-t1_rows[[length(t1_rows) + 1]] <- list(section = "shared",
-                                       Variable = paste0(ga_row$label, "\u1d43"),
-                                       VPT = ga_row$VPT, FT = ga_row$FT,
-                                       p = ga_row$p)
-
-# Sex (chi-square)
-sex_tab <- table(df$Group, df$sex)
-sex_chi <- suppressWarnings(chisq.test(sex_tab))
-# Determine which sex code corresponds to Female (Methods 2.1: 1 = F, 0 = M)
-n_male_vpt   <- sum(df$sex == 0 & df$Group == "VPT", na.rm = TRUE)
-n_female_vpt <- sum(df$sex == 1 & df$Group == "VPT", na.rm = TRUE)
-n_male_ft    <- sum(df$sex == 0 & df$Group == "FT",  na.rm = TRUE)
-n_female_ft  <- sum(df$sex == 1 & df$Group == "FT",  na.rm = TRUE)
-
-t1_rows[[length(t1_rows) + 1]] <- list(section = "shared",
-                                       Variable = "Sex\u1d47",
-                                       VPT = "", FT = "",
-                                       p = fmt_p(sex_chi$p.value))
-t1_rows[[length(t1_rows) + 1]] <- list(section = "shared_sub",
-                                       Variable = "  Male",
-                                       VPT = n_pct(n_male_vpt, n_vpt),
-                                       FT  = n_pct(n_male_ft, n_ft),
-                                       p = "")
-t1_rows[[length(t1_rows) + 1]] <- list(section = "shared_sub",
-                                       Variable = "  Female",
-                                       VPT = n_pct(n_female_vpt, n_vpt),
-                                       FT  = n_pct(n_female_ft, n_ft),
-                                       p = "")
-
-# Corrected age at MRI
-age_row <- welch_row("age_at_5y_mri", "Corrected age at MRI", "years", digits = 2)
-t1_rows[[length(t1_rows) + 1]] <- list(section = "shared",
-                                       Variable = paste0(age_row$label, "\u1d43"),
-                                       VPT = age_row$VPT, FT = age_row$FT,
-                                       p = age_row$p)
-
-# TIV — eTIV in mm^3, convert to cm^3 (divide by 1000) per manuscript
-tiv_vpt <- df$eTIV[df$Group == "VPT"] / 1000
-tiv_ft  <- df$eTIV[df$Group == "FT"]  / 1000
-tiv_vpt <- tiv_vpt[!is.na(tiv_vpt)]
-tiv_ft  <- tiv_ft[!is.na(tiv_ft)]
-tiv_t <- t.test(tiv_vpt, tiv_ft)
-t1_rows[[length(t1_rows) + 1]] <- list(
-  section = "shared",
-  Variable = "Total Intracranial Volume, cm\u00b3\u1d43",
-  VPT = sprintf("%.0f \u00b1 %.0f", mean(tiv_vpt), sd(tiv_vpt)),
-  FT  = sprintf("%.0f \u00b1 %.0f", mean(tiv_ft),  sd(tiv_ft)),
-  p   = fmt_p(tiv_t$p.value)
-)
-
-# Relative motion
-rm_row <- welch_row("Rel_Motion", "Relative Motion", "mm", digits = 2)
-t1_rows[[length(t1_rows) + 1]] <- list(section = "shared",
-                                       Variable = paste0(rm_row$label, "\u1d43"),
-                                       VPT = rm_row$VPT, FT = rm_row$FT,
-                                       p = rm_row$p)
-
-# VPT clinical variables header
-t1_rows[[length(t1_rows) + 1]] <- list(section = "vpt",
-                                       Variable = "VPT clinical variables",
-                                       VPT = "", FT = "", p = "")
-
-# Birth weight (VPT only)
-bw_vpt <- df$bw[df$Group == "VPT"]
-bw_vpt <- bw_vpt[!is.na(bw_vpt)]
-t1_rows[[length(t1_rows) + 1]] <- list(
-  section = "vpt_sub",
-  Variable = "Birth weight, grams",
-  VPT = sprintf("%.1f \u00b1 %.1f", mean(bw_vpt), sd(bw_vpt)),
-  FT  = "\u2014",
-  p   = "\u2014"
-)
-
-# Maternal social risk score
-srs_vpt <- df$sriskscore[df$Group == "VPT"]
-srs_vpt <- srs_vpt[!is.na(srs_vpt)]
-t1_rows[[length(t1_rows) + 1]] <- list(
-  section = "vpt_sub",
-  Variable = "Maternal social risk score",
-  VPT = sprintf("%.1f \u00b1 %.1f", mean(srs_vpt), sd(srs_vpt)),
-  FT  = "\u2014",
-  p   = "\u2014"
-)
-
-# Global brain abnormality score (median [IQR])
-gba_vpt <- df$globalbrainscore2[df$Group == "VPT"]
-t1_rows[[length(t1_rows) + 1]] <- list(
-  section = "vpt_sub",
-  Variable = "Global brain abnormality score\u1d9c",
-  VPT = median_iqr(gba_vpt, digits = 1),
-  FT  = "\u2014",
-  p   = "\u2014"
-)
-
-# BPD grade
-# Methods 2.1 says bpd2 is binary (1 = any BPD; 0 = none). Manuscript Table 1
-# shows the underlying ordinal grade, carried in the bpdgrade column (0-3).
-# If bpdgrade is absent we fall back to the binary bpd2 split.
-if ("bpdgrade" %in% names(df)) {
-  bpd_vpt <- df$bpdgrade[df$Group == "VPT"]
-  t1_rows[[length(t1_rows) + 1]] <- list(
-    section = "vpt", Variable = "BPD grade", VPT = "", FT = "", p = ""
-  )
-  for (g in c(0, 1, 2, 3)) {
-    lbl <- if (g == 0) "  No BPD" else sprintf("  Grade %d", g)
-    n_g <- sum(bpd_vpt == g, na.rm = TRUE)
-    t1_rows[[length(t1_rows) + 1]] <- list(
-      section = "vpt_sub", Variable = lbl,
-      VPT = n_pct(n_g, n_vpt),
-      FT  = "\u2014",
-      p   = "\u2014"
-    )
-  }
-} else {
-  bpd_vpt <- df$bpd2[df$Group == "VPT"]
-  t1_rows[[length(t1_rows) + 1]] <- list(
-    section = "vpt", Variable = "BPD (any vs none)", VPT = "", FT = "", p = ""
-  )
-  t1_rows[[length(t1_rows) + 1]] <- list(
-    section = "vpt_sub", Variable = "  No BPD",
-    VPT = n_pct(sum(bpd_vpt == 0, na.rm = TRUE), n_vpt),
-    FT = "\u2014", p = "\u2014"
-  )
-  t1_rows[[length(t1_rows) + 1]] <- list(
-    section = "vpt_sub", Variable = "  Any BPD",
-    VPT = n_pct(sum(bpd_vpt == 1, na.rm = TRUE), n_vpt),
-    FT = "\u2014", p = "\u2014"
-  )
+add_row <- function(Variable, inc = "", ninc = "", ft = "", p_ft = "", p_inc = "") {
+  t1_rows[[length(t1_rows) + 1]] <<- c(Variable = Variable, inc = inc, ninc = ninc,
+                                       ft = ft, p_ft = p_ft, p_inc = p_inc)
 }
 
-# ROP
-rop_vpt <- df$anyrop[df$Group == "VPT"]
-t1_rows[[length(t1_rows) + 1]] <- list(
-  section = "vpt_sub",
-  Variable = "ROP",
-  VPT = n_pct(sum(rop_vpt == 1, na.rm = TRUE), n_vpt),
-  FT  = "\u2014",
-  p   = "\u2014"
-)
+# Continuous row; `vpt_ft` = TRUE when the variable is also compared with FT.
+cont_row <- function(label, var, digits = 1, scale = 1, summary = mean_sd,
+                     vpt_ft = FALSE, inc_vs_not = TRUE) {
+  inc_x  <- if (inc_vs_not) incl[[var]][is_inc] / scale else df[[var]][is_vpt] / scale
+  ninc_x <- if (inc_vs_not) incl[[var]][is_ninc] / scale else NULL
+  add_row(label,
+          inc   = summary(inc_x, digits),
+          ninc  = if (inc_vs_not) summary(ninc_x, digits) else DASH,
+          ft    = if (vpt_ft) summary(df[[var]][is_ft] / scale, digits) else DASH,
+          p_ft  = if (vpt_ft) welch_p(df[[var]][is_vpt], df[[var]][is_ft]) else DASH,
+          p_inc = if (inc_vs_not) welch_p(inc_x, ninc_x) else DASH)
+}
 
-# Sepsis
-sep_vpt <- df$sepsis2[df$Group == "VPT"]
-t1_rows[[length(t1_rows) + 1]] <- list(
-  section = "vpt_sub",
-  Variable = "Sepsis",
-  VPT = n_pct(sum(sep_vpt == 1, na.rm = TRUE), n_vpt),
-  FT  = "\u2014",
-  p   = "\u2014"
-)
+# Binary (0/1) row: count (%) of 1s
+bin_row <- function(label, var, x_incl = incl[[var]]) {
+  add_row(label,
+          inc   = n_pct(sum(x_incl[is_inc]  == 1, na.rm = TRUE), n_inc),
+          ninc  = n_pct(sum(x_incl[is_ninc] == 1, na.rm = TRUE), n_ninc),
+          ft    = DASH, p_ft = DASH,
+          p_inc = chisq_p(x_incl, incl$included))
+}
 
-# --- Assemble dataframe -----------------------------------------------------
-table1_df <- data.frame(
-  Variable  = sapply(t1_rows, `[[`, "Variable"),
-  VPT       = sapply(t1_rows, `[[`, "VPT"),
-  FT        = sapply(t1_rows, `[[`, "FT"),
-  p_value   = sapply(t1_rows, `[[`, "p"),
-  stringsAsFactors = FALSE
-)
+# --- Shared variables ---------------------------------------------------------
+add_row("Shared variables")
+cont_row("GA at birth, weeksᵃ", "ga", vpt_ft = TRUE)
+
+add_row("Sexᵇ",
+        p_ft  = chisq_p(df$sex, df$Group),
+        p_inc = chisq_p(incl$sex, incl$included))
+for (s in list(c(0, "Male"), c(1, "Female"))) {
+  code <- as.numeric(s[1])
+  add_row(paste0("  ", s[2]),
+          inc  = n_pct(sum(incl$sex[is_inc]  == code), n_inc),
+          ninc = n_pct(sum(incl$sex[is_ninc] == code), n_ninc),
+          ft   = n_pct(sum(df$sex[is_ft]     == code), n_ft))
+}
+
+cont_row("Corrected age at MRI, yearsᵃ", "age_at_5y_mri", digits = 2,
+         vpt_ft = TRUE, inc_vs_not = FALSE)
+cont_row("Total Intracranial Volume, cm³ᵃ", "eTIV", digits = 0,
+         scale = 1000, vpt_ft = TRUE, inc_vs_not = FALSE)
+cont_row("Relative Motion, mmᵃ", "Rel_Motion", digits = 2,
+         vpt_ft = TRUE, inc_vs_not = FALSE)
+
+# --- VPT clinical variables ---------------------------------------------------
+add_row("VPT clinical variables")
+cont_row("Birth weight, grams", "bw")
+cont_row("Maternal social risk score", "sriskscore")
+cont_row("Global brain abnormality scoreᶜ", "globalbrainscore2",
+         summary = median_iqr)
+
+add_row("BPD grade", p_inc = chisq_p(incl$bpdgrade, incl$included))
+for (g in 0:3) {
+  add_row(if (g == 0) "  No BPD" else sprintf("  Grade %d", g),
+          inc  = n_pct(sum(incl$bpdgrade[is_inc]  == g), n_inc),
+          ninc = n_pct(sum(incl$bpdgrade[is_ninc] == g), n_ninc),
+          ft = DASH, p_ft = DASH)
+}
+
+bin_row("ROP", "anyrop")
+
+bin_row("Sepsis", "sepsis2")
+
+cont_row("DWMAᶜ", "dwma_percent", summary = median_iqr)
+bin_row("IVH", "anyivh")
+bin_row("Hydrocephalus", "hydrocephalus_dc")
+
+# --- Assemble + write -------------------------------------------------------
+table1_df <- as.data.frame(do.call(rbind, t1_rows), stringsAsFactors = FALSE)
 names(table1_df) <- c("",
-                      sprintf("VPT (n = %d)", n_vpt),
-                      sprintf("FT (n = %d)",  n_ft),
-                      "p-value")
+                      sprintf("VPT included (n = %d)", n_inc),
+                      sprintf("VPT not included (n = %d)", n_ninc),
+                      sprintf("FT (n = %d)", n_ft),
+                      "p-value (VPT vs. FT)",
+                      "p-value (VPT included vs. not included)")
 
-cat("Table 1 rows:\n")
 print(table1_df, row.names = FALSE)
 
-# --- Write CSV ---------------------------------------------------------------
 out_path <- file.path(tables_out, "Table_1_participant_characteristics.csv")
 write.csv(table1_df, out_path, row.names = FALSE, fileEncoding = "UTF-8")
 cat(sprintf("\nWrote: %s\n", out_path))
 
+# Results text: relative motion VPT vs FT (Welch's t)
+rm_t <- t.test(df$Rel_Motion[is_vpt], df$Rel_Motion[is_ft])
+cat(sprintf("Relative motion VPT vs FT: Welch's t = %.2f, p = %s\n",
+            rm_t$statistic, fmt_p(rm_t$p.value)))
 
 # ============================================================================ 
 # SECTION 4: TABLE 2 + FIGURE 2 - VPT vs FT GROUP DIFFERENCES
 # ----------------------------------------------------------------------------
-# Manuscript Table 2 layout (5 metric columns x 14 data rows):
+# Manuscript Table 2 layout:
 #
 #   Columns:  Density | Strength | GE | ACC | SW
 #
-#   Rows (per Unadjusted / Fully Adjusted block):
-#     n (VPT/FT)
-#     Test statistic               (t / F / chi^2 / beta depending on metric)
+#   Group values (mean +/- SD of each participant's 11-100% curve):
+#     n (VPT/FT), VPT, FT
+#   Unadjusted / Fully Adjusted blocks:
+#     Test statistic               (t / beta for density; F / chi^2 for PFFR)
 #     p-value
 #     Variance explained
 #     Functional variance explained
 #     Effect direction             (VPT < FT  or  VPT > FT)
 #     CI excludes zero             (e.g. "11-100%", "ns" - PFFR rows only)
 #
-# Density column sourced from results/density_group_difference/
-# density_sensitivity_results.xlsx (Sheet "Sensitivity Analyses"):
-#   Sample == "Full sample" + Covariates %in% c("Unadjusted (Welch's t)",
-#                                              "+ Age + Sex + Motion + eTIV")
+# Density column computed here from den_100.00 (Welch's t; ANCOVA adjusted for
+# age at MRI, sex, relative motion, eTIV).
 #
-# PFFR metric columns sourced from 8 RData files in results/fda_group_differences/.
-# Folder naming convention (TWO_fda_group_difference_runs.R):
-#   {metric}_FDA_Group_11-100_fullsample                                (unadj)
-#   {metric}_FDA_Group_age_at_5y_mri_eTIV_sex_Rel_Motion_11-100_fullsample (full)
-# where {metric} prefix is one of: strength, rand_norm_wei_GE,
-# rand_norm_wei_ACC, rand_norm_wei_SW.
+# PFFR metric columns from 8 RData files:
+#   results/group_differences/{strength,GE_norm,ACC_norm,SW}/
+#       {1_unadjusted,6_fully_adjusted}/model/FDA_results.RData
 #
 # Figure 2: 4-panel composite (A=Strength, B=GE, C=ACC, D=SW), each showing the
 # Group beta(density) coefficient with 95% bootstrap CI from the fully-adjusted
@@ -655,38 +519,34 @@ cat("========================================\n\n")
 # manuscript footnote convention.
 group_specs <- list(
   Strength = list(
-    folder_prefix  = "str",
+    folder_prefix  = "strength",
     rdata_filename = "str_FDA_results.RData",
     panel_label    = "Strength",
     family_label   = "F",
     ve_suffix      = ""
   ),
   GE = list(
-    folder_prefix  = "rand_norm_wei_GE",
+    folder_prefix  = "GE_norm",
     rdata_filename = "rand_norm_wei_GE_FDA_results.RData",
     panel_label    = "GE",
     family_label   = "F",
     ve_suffix      = ""
   ),
   ACC = list(
-    folder_prefix  = "rand_norm_wei_ACC",
+    folder_prefix  = "ACC_norm",
     rdata_filename = "rand_norm_wei_ACC_FDA_results.RData",
     panel_label    = "ACC",
     family_label   = "F",
     ve_suffix      = ""
   ),
   SW = list(
-    folder_prefix  = "rand_norm_wei_SW",
+    folder_prefix  = "SW",
     rdata_filename = "rand_norm_wei_SW_FDA_results.RData",
     panel_label    = "SW",
     family_label   = "Chi^2",
     ve_suffix      = "\u1d43"   # superscript 'a' footnote marker
   )
 )
-
-# Folder suffixes (predictor order MUST match TWO_fda_group_difference_runs.R)
-suffix_unadj <- "Group_11-100_fullsample"
-suffix_full  <- "Group_age_at_5y_mri_eTIV_sex_Rel_Motion_11-100_fullsample"
 
 # --- Helpers (Section-4-scoped) ---------------------------------------------
 
@@ -711,9 +571,8 @@ group_effect_direction <- function(beta_df) {
     sig_betas <- beta_df$beta[excludes]
     sign_val <- sign(mean(sig_betas, na.rm = TRUE))
   } else {
-    # No significant region: sign at peak |beta|
-    peak_idx <- which.max(abs(beta_df$beta))
-    sign_val <- sign(beta_df$beta[peak_idx])
+    # No significant region: no direction reported (em-dash, as in Table 2)
+    return("\u2014")
   }
   if (is.na(sign_val) || sign_val == 0) return(NA_character_)
   if (sign_val < 0) "VPT < FT" else "VPT > FT"
@@ -782,12 +641,10 @@ for (mkey in names(group_specs)) {
   spec <- group_specs[[mkey]]
   cat(sprintf("[%s]\n", mkey))
   
-  unadj_path <- file.path(fda_group_root,
-                          sprintf("%s_FDA_%s", spec$folder_prefix, suffix_unadj),
-                          spec$rdata_filename)
-  full_path  <- file.path(fda_group_root,
-                          sprintf("%s_FDA_%s", spec$folder_prefix, suffix_full),
-                          spec$rdata_filename)
+  unadj_path <- file.path(fda_group_root, spec$folder_prefix, "1_unadjusted",
+                          "model", "FDA_results.RData")
+  full_path  <- file.path(fda_group_root, spec$folder_prefix, "6_fully_adjusted",
+                          "model", "FDA_results.RData")
   
   if (require_input(unadj_path, sprintf("%s unadjusted RData", mkey))) {
     unadj_cells <- extract_group_cells(unadj_path, spec, is_fully_adjusted = FALSE)
@@ -813,70 +670,71 @@ for (mkey in names(group_specs)) {
   pffr_cells[[mkey]] <- list(unadj = unadj_cells, full = full_cells)
 }
 
-# --- Density column from density_sensitivity_results.xlsx -------------------
-# Sheet "Sensitivity Analyses". We pull rows where Sample == "Full sample" and
-# Covariates %in% c("Unadjusted (Welch's t)", "+ Age + Sex + Motion + eTIV").
-# Unadjusted row reports |t| from Welch's; fully adjusted reports beta.
+# --- Density column (computed directly from den_100.00) ---------------------
+# Unadjusted: Welch's t (FT vs VPT; positive t = lower density in VPT).
+# Fully adjusted: ANCOVA, den ~ Group + age + sex + relative motion + eTIV;
+# the cell reports the VPT beta. Matches Figure 1 / ONE_density_group_difference.R.
 
 density_cells <- list(unadj = NULL, full = NULL)
-if (require_input(density_xlsx, "density results xlsx")) {
-  dens_res <- as.data.frame(read_excel(density_xlsx, sheet = "Sensitivity Analyses"))
-  
-  # Robust column lookup (some R versions strip parentheses / replace spaces)
-  pick_col <- function(df, candidates) {
-    hit <- candidates[candidates %in% names(df)]
-    if (length(hit) == 0) {
-      stop(sprintf("Density xlsx missing any of: %s",
-                   paste(candidates, collapse = ", ")))
-    }
-    hit[1]
-  }
-  col_sample  <- pick_col(dens_res, c("Sample"))
-  col_covs    <- pick_col(dens_res, c("Covariates"))
-  col_beta    <- pick_col(dens_res, c("Beta (Group)", "Beta"))
-  col_t       <- pick_col(dens_res, c("t"))
-  col_p       <- pick_col(dens_res, c("p"))
-  col_n_vpt   <- pick_col(dens_res, c("N (VPT)", "N_VPT"))
-  col_n_ft    <- pick_col(dens_res, c("N (FT)",  "N_FT"))
-  
-  full_sample <- dens_res[dens_res[[col_sample]] == "Full sample", , drop = FALSE]
-  
-  unadj_row <- full_sample[full_sample[[col_covs]] == "Unadjusted (Welch's t)",
-                           , drop = FALSE]
-  adj_row   <- full_sample[full_sample[[col_covs]] == "+ Age + Sex + Motion + eTIV",
-                           , drop = FALSE]
-  
-  if (nrow(unadj_row) == 1) {
-    t_val <- abs(unadj_row[[col_t]][1])  # report magnitude only, sign in direction row
-    density_cells$unadj <- list(
-      n         = c(VPT = unadj_row[[col_n_vpt]][1], FT = unadj_row[[col_n_ft]][1]),
-      stat_str  = sprintf("t = %.2f", t_val),
-      p         = unadj_row[[col_p]][1],
-      ve        = NA_real_,
-      fve       = NA_real_,
-      direction = if (unadj_row[[col_t]][1] < 0) "VPT > FT" else "VPT < FT"
-    )
-    # Use fmt_p_relop for the diagnostic so character p ("<0.001") prints fine.
-    cat(sprintf("Density unadj:  t=%.2f, p=%s  n(VPT/FT)=%d/%d\n",
-                t_val, fmt_p_relop(density_cells$unadj$p),
-                density_cells$unadj$n["VPT"], density_cells$unadj$n["FT"]))
-  }
-  if (nrow(adj_row) == 1) {
-    beta_val <- adj_row[[col_beta]][1]
-    density_cells$full <- list(
-      n         = c(VPT = adj_row[[col_n_vpt]][1], FT = adj_row[[col_n_ft]][1]),
-      stat_str  = sprintf("\u03b2 = %s%.3f", if (beta_val < 0) "\u2212" else "",
-                          abs(beta_val)),
-      p         = adj_row[[col_p]][1],
-      ve        = NA_real_,
-      fve       = NA_real_,
-      direction = if (beta_val < 0) "VPT < FT" else "VPT > FT"
-    )
-    cat(sprintf("Density adj:    beta=%.3f, p=%s\n",
-                beta_val, fmt_p_relop(density_cells$full$p)))
-  }
+den_col <- "den_100.00"
+if (den_col %in% names(df)) {
+  den <- df[[den_col]]
+  tt  <- t.test(den[is_ft], den[is_vpt])
+  density_cells$unadj <- list(
+    n         = c(VPT = sum(is_vpt & !is.na(den)), FT = sum(is_ft & !is.na(den))),
+    stat_str  = sprintf("t = %.2f", abs(tt$statistic)),
+    p         = tt$p.value,
+    direction = if (tt$statistic > 0) "VPT < FT" else "VPT > FT"
+  )
+  den_df  <- na.omit(data.frame(den = den, Group = df$Group,
+                                age_at_5y_mri = df$age_at_5y_mri, sex = df$sex,
+                                Rel_Motion = df$Rel_Motion, eTIV = df$eTIV))
+  fit_den <- lm(den ~ Group + age_at_5y_mri + sex + Rel_Motion + eTIV, data = den_df)
+  co <- summary(fit_den)$coefficients["Group", ]
+  density_cells$full <- list(
+    n         = c(VPT = sum(den_df$Group == 1), FT = sum(den_df$Group == 0)),
+    stat_str  = sprintf("β = %s%.3f", if (co[1] < 0) "−" else "", abs(co[1])),
+    p         = co[4],
+    direction = if (co[1] < 0) "VPT < FT" else "VPT > FT"
+  )
+  cat(sprintf("Density unadj: t = %.2f, p = %s\n", tt$statistic, fmt_p(tt$p.value)))
+  cat(sprintf("Density adj:   beta = %.4f, p = %s\n", co[1], fmt_p(co[4])))
+} else {
+  if (STRICT) stop("den_100.00 not found in analytic cohort", call. = FALSE)
+  cat("  [skip] den_100.00 not found in analytic cohort\n")
 }
 
+# --- Group values (mean +/- SD) ---------------------------------------------
+# Each participant's metric(density) curve is averaged across the analytic
+# range (11-100%), then summarized by group. GE excludes the same two VPT
+# outliers (IDs 659, 713) as the GE models / Supplementary Note 4.
+gv_specs <- list(
+  Density  = list(prefix = NA,                  digits = 3, excl = integer(0)),
+  Strength = list(prefix = "str_",              digits = 2, excl = integer(0)),
+  GE       = list(prefix = "rand_norm_wei_GE_", digits = 3, excl = c(659L, 713L)),
+  ACC      = list(prefix = "rand_norm_wei_ACC_",digits = 3, excl = integer(0)),
+  SW       = list(prefix = "rand_norm_wei_SW_", digits = 2, excl = integer(0))
+)
+
+metric_curve_mean <- function(prefix) {
+  cols <- grep(paste0("^", prefix, "[0-9.]+$"), names(df), value = TRUE)
+  dens <- as.numeric(sub(prefix, "", cols, fixed = TRUE))
+  cols <- cols[dens >= density_min & dens <= density_max]
+  rowMeans(as.matrix(df[, cols]), na.rm = TRUE)
+}
+
+group_values <- list()
+for (m in names(gv_specs)) {
+  s    <- gv_specs[[m]]
+  x    <- if (is.na(s$prefix)) df[[den_col]] else metric_curve_mean(s$prefix)
+  keep <- !(df$ID %in% s$excl) & !is.na(x)
+  fmt  <- paste0("%.", s$digits, "f ± %.", s$digits, "f")
+  group_values[[m]] <- list(
+    n   = sprintf("%d/%d", sum(keep & is_vpt), sum(keep & is_ft)),
+    VPT = sprintf(fmt, mean(x[keep & is_vpt]), sd(x[keep & is_vpt])),
+    FT  = sprintf(fmt, mean(x[keep & is_ft]),  sd(x[keep & is_ft]))
+  )
+}
 # --- Assemble Table 2 dataframe ---------------------------------------------
 # Each "cell builder" returns the formatted string for one row x metric.
 
@@ -896,6 +754,19 @@ row_dash <- function() "\u2014"
 mkeys <- names(group_specs)
 table2_rows <- list()
 
+# Group values block (mean +/- SD of each participant's 11-100% curve)
+table2_rows[[length(table2_rows) + 1]] <- c(
+  Variable = "Group values (mean \u00b1 SD)", Density = "",
+  setNames(rep("", length(mkeys)), mkeys)
+)
+for (rr in c("n", "VPT", "FT")) {
+  table2_rows[[length(table2_rows) + 1]] <- c(
+    Variable = if (rr == "n") "n (VPT/FT)" else rr,
+    Density  = group_values$Density[[rr]],
+    sapply(mkeys, function(m) group_values[[m]][[rr]])
+  )
+}
+
 # Header row: section "Unadjusted"
 table2_rows[[length(table2_rows) + 1]] <- c(
   Variable = "Unadjusted", Density = "",
@@ -903,11 +774,6 @@ table2_rows[[length(table2_rows) + 1]] <- c(
 )
 
 # Unadjusted block
-table2_rows[[length(table2_rows) + 1]] <- c(
-  Variable = "n (VPT/FT)",
-  Density  = cell_n(density_cells$unadj),
-  sapply(mkeys, function(m) cell_n(pffr_cells[[m]]$unadj))
-)
 table2_rows[[length(table2_rows) + 1]] <- c(
   Variable = "Test statistic",
   Density  = cell_stat_den(density_cells$unadj),
@@ -946,11 +812,6 @@ table2_rows[[length(table2_rows) + 1]] <- c(
 )
 
 # Fully-adjusted block
-table2_rows[[length(table2_rows) + 1]] <- c(
-  Variable = "n (VPT/FT)",
-  Density  = cell_n(density_cells$full),
-  sapply(mkeys, function(m) cell_n(pffr_cells[[m]]$full))
-)
 table2_rows[[length(table2_rows) + 1]] <- c(
   Variable = "Test statistic",
   Density  = cell_stat_den(density_cells$full),
@@ -1035,11 +896,11 @@ save_fig(fig2, "Figure_2_group_difference_betas",
 # SECTION 5: TABLE 3 + FIGURES 3-5 - STABILITY SELECTION
 # ----------------------------------------------------------------------------
 # Manuscript Table 3 layout (4 metric columns, ordering = stably-selected first):
-#   Columns:  ACC | SW | GE | Strength
+#   Columns:  ACC | Strength | GE | SW
 #   Row sections:
 #     Stability selection
-#       Top exposure (frequency)        e.g. "GBA (94%)"
-#       2nd exposure (frequency)        e.g. "BPD (58%)"
+#       Top exposure (frequency)        e.g. "GBA (74%)"
+#       2nd exposure (frequency)        e.g. "Hydrocephalus (40%)"
 #     Full-sample model
 #       Test statistic                  F = ... or chi^2 = ...^a
 #       p
@@ -1050,31 +911,30 @@ save_fig(fig2, "Figure_2_group_difference_betas",
 #       p (vs forced only)
 #       Functional variance explained increment
 #       Beta direction                  Positive / Negative
-#       CI excludes zero                density range "11-100%" / "15.5-68.5%"
-# For metrics without a stably-selected exposure (GE, Strength), the model
+#       CI excludes zero                density range, e.g. "11-100%"
+# For metrics without a stably-selected exposure (GE, SW), the model
 # and contribution rows show dashes; only the two exposure rows are filled.
 #
 # Inputs: 4 RData files at
-#   results/fda_stability_selection/{metric}_stabsel_11-100/
-#       {metric}_stabsel_results.RData
-# where {metric} is: str, rand_norm_wei_GE, rand_norm_wei_ACC, rand_norm_wei_SW.
+#   results/stability_selection/{ACC_norm,strength,GE_norm,SW}/
+#       *_stabsel_results.RData
 #
 # Figure layouts:
 #   Figure 3: ACC — 2 panels (A: stability frequencies, B: GBA beta(d))
-#   Figure 4: SW  — 2 panels (A: stability frequencies, B: ROP beta(d))
-#   Figure 5: GE | Strength — 2 panels (both stability frequencies only)
+#   Figure 4: Strength — 2 panels (A: stability frequencies, B: GBA beta(d))
+#   Figure 5: GE | SW — 2 panels (both stability frequencies only)
 # ============================================================================ 
 
 cat("\n========================================\n")
 cat("Building Table 3 + Figures 3, 4, 5 (Stability Selection)\n")
 cat("========================================\n\n")
 
-# --- Metric specs (Table 3 column order: ACC, SW, GE, Strength) -------------
+# --- Metric specs -----------------------------------------------------------
 # folder_subdir is relative to fda_stabsel_root; rdata_filename comes from the
-# pipeline's save() call (see FOUR_fda_stability_selection_pipeline.R line 1009).
+# pipeline's save() call (see the end of FOUR_fda_stability_selection_pipeline.R).
 stabsel_specs <- list(
   ACC = list(
-    folder_subdir  = "rand_norm_wei_ACC_stabsel_11-100",
+    folder_subdir  = "ACC_norm",
     rdata_filename = "rand_norm_wei_ACC_stabsel_results.RData",
     family_label   = "F",
     ve_suffix      = "",
@@ -1084,17 +944,17 @@ stabsel_specs <- list(
     figure_basename = "Figure_3_ACC_stability_selection"
   ),
   SW = list(
-    folder_subdir  = "rand_norm_wei_SW_stabsel_11-100",
+    folder_subdir  = "SW",
     rdata_filename = "rand_norm_wei_SW_stabsel_results.RData",
     family_label   = "Chi^2",
     ve_suffix      = "\u1d43",   # superscript 'a' (scat footnote marker)
     metric_label   = "SW",
-    has_figure     = TRUE,
-    figure_number  = 4,
-    figure_basename = "Figure_4_SW_stability_selection"
+    has_figure     = FALSE,   # combined into Figure 5 panel B
+    figure_number  = NA,
+    figure_basename = NA
   ),
   GE = list(
-    folder_subdir  = "rand_norm_wei_GE_stabsel_11-100",
+    folder_subdir  = "GE_norm",
     rdata_filename = "rand_norm_wei_GE_stabsel_results.RData",
     family_label   = "F",
     ve_suffix      = "",
@@ -1104,14 +964,14 @@ stabsel_specs <- list(
     figure_basename = NA
   ),
   Strength = list(
-    folder_subdir  = "str_stabsel_11-100",
+    folder_subdir  = "strength",
     rdata_filename = "str_stabsel_results.RData",
     family_label   = "F",
     ve_suffix      = "",
     metric_label   = "Strength",
-    has_figure     = FALSE,   # combined into Figure 5 panel B
-    figure_number  = NA,
-    figure_basename = NA
+    has_figure     = TRUE,
+    figure_number  = 4,
+    figure_basename = "Figure_4_strength_stability_selection"
   )
 )
 
@@ -1122,7 +982,10 @@ exposure_labels <- c(
   ga                = "GA",
   globalbrainscore2 = "GBA",
   anyrop            = "ROP",
-  sepsis2           = "Sepsis"
+  sepsis2           = "Sepsis",
+  bw_z_new          = "BWZ",
+  anyivh            = "IVH",
+  hydrocephalus_dc  = "Hydrocephalus"
 )
 
 # Stability threshold (Methods 2.7.4 - matches FOUR_fda_stability_selection_pipeline.R)
@@ -1222,7 +1085,7 @@ build_stabsel_freq_panel <- function(selection_freq, panel_letter, panel_title) 
          title = sprintf("%s. %s", panel_letter, panel_title)) +
     theme_classic(base_size = 11) +
     theme(plot.title = element_text(face = "bold", hjust = 0, size = 13),
-          axis.text.x = element_text(size = 10, color = "black"),
+          axis.text.x = element_text(size = 10, color = "black", angle = 45, hjust = 1),
           axis.text.y = element_text(size = 10, color = "black"),
           axis.title.y = element_text(size = 11),
           axis.ticks.x = element_blank())
@@ -1262,6 +1125,12 @@ for (mkey in mkeys_stabsel) {
   cat(sprintf("[%s]\n", mkey))
   
   rdata_path <- file.path(fda_stabsel_root, spec$folder_subdir, spec$rdata_filename)
+  if (!file.exists(rdata_path)) {
+    # Fall back to whichever *_stabsel_results.RData the pipeline wrote here
+    hits <- list.files(file.path(fda_stabsel_root, spec$folder_subdir),
+                       pattern = "_stabsel_results\\.RData$", full.names = TRUE)
+    if (length(hits) > 0) rdata_path <- hits[1]
+  }
   
   if (!require_input(rdata_path, sprintf("%s stabsel RData", mkey))) {
     # Dev mode: emit pending placeholder cells, skip figure generation
@@ -1373,19 +1242,19 @@ for (mkey in mkeys_stabsel) {
 }
 
 # --- Assemble Table 3 dataframe ---------------------------------------------
-# Manuscript ordering: ACC, SW, GE, Strength.
+# Manuscript ordering: ACC, Strength, GE, SW.
 
 cell_or_pending <- function(cells, key) {
   if (is.null(cells)) return("PENDING")
   cells[[key]]
 }
 
-mkey_order_t3 <- c("ACC", "SW", "GE", "Strength")
-metric_n <- list(    
+mkey_order_t3 <- c("ACC", "Strength", "GE", "SW")
+metric_n <- list(
   ACC      = 171,
-  SW       = 169,
-  GE       = 170,
-  Strength = 169
+  SW       = 171,
+  GE       = 169,
+  Strength = 171
 )
 
 table3_rows <- list()
@@ -1455,9 +1324,9 @@ for (entry in list(
 table3_df <- as.data.frame(do.call(rbind, table3_rows), stringsAsFactors = FALSE)
 names(table3_df) <- c("",
                       sprintf("ACC (n=%d)", metric_n$ACC),
-                      sprintf("SW (n=%d)",  metric_n$SW),
+                      sprintf("Strength (n=%d)", metric_n$Strength),
                       sprintf("GE (n=%d)",  metric_n$GE),
-                      sprintf("Strength (n=%d)", metric_n$Strength))
+                      sprintf("SW (n=%d)",  metric_n$SW))
 
 cat("\nTable 3:\n")
 print(table3_df, row.names = FALSE)
@@ -1470,7 +1339,7 @@ cat(sprintf("\nWrote: %s\n", out_path))
 
 if (!is.null(fig_panels$ACC$freq_panel)) {
   if (!is.null(fig_panels$ACC$beta_panel)) {
-    fig3 <- fig_panels$ACC$freq_panel | fig_panels$ACC$beta_panel
+    fig3 <- fig_panels$ACC$freq_panel | wrap_elements(full = fig_panels$ACC$beta_panel)
   } else {
     fig3 <- fig_panels$ACC$freq_panel
   }
@@ -1478,32 +1347,22 @@ if (!is.null(fig_panels$ACC$freq_panel)) {
            width_in = 10, height_in = 4.5)
 }
 
-# --- Build Figure 4 (SW stab freq + ROP beta(d)) ----------------------------
+# --- Build Figure 4 (Strength stab freq + GBA beta(d)) ----------------------
 
-if (!is.null(fig_panels$SW$freq_panel)) {
-  if (!is.null(fig_panels$SW$beta_panel)) {
-    fig4 <- fig_panels$SW$freq_panel | fig_panels$SW$beta_panel
+if (!is.null(fig_panels$Strength$freq_panel)) {
+  if (!is.null(fig_panels$Strength$beta_panel)) {
+    fig4 <- fig_panels$Strength$freq_panel | wrap_elements(full = fig_panels$Strength$beta_panel)
   } else {
-    fig4 <- fig_panels$SW$freq_panel
+    fig4 <- fig_panels$Strength$freq_panel
   }
-  save_fig(fig4, stabsel_specs$SW$figure_basename,
+  save_fig(fig4, "Figure_4_strength_stability_selection",
            width_in = 10, height_in = 4.5)
 }
 
-# --- Build Figure 5 (GE stab freq | Strength stab freq) ---------------------
+# --- Build Figure 5 (GE stab freq | SW stab freq) ---------------------------
 
-if (!is.null(fig_panels$GE$freq_panel) && !is.null(fig_panels$Strength$freq_panel)) {
-  ge_panel <- fig_panels$GE$freq_panel +
-    ggtitle("A. GE stability selection")
-  str_panel <- fig_panels$Strength$freq_panel +
-    ggtitle("B. Strength stability selection")
-  fig5 <- ge_panel | str_panel
-  save_fig(fig5, "Figure_5_GE_strength_stability",
-           width_in = 10, height_in = 4.5)
-} else if (!is.null(fig_panels$GE$freq_panel)) {
-  save_fig(fig_panels$GE$freq_panel + ggtitle("A. GE stability selection"),
-           "Figure_5_GE_strength_stability", width_in = 10, height_in = 4.5)
-} else if (!is.null(fig_panels$Strength$freq_panel)) {
-  save_fig(fig_panels$Strength$freq_panel + ggtitle("B. Strength stability selection"),
-           "Figure_5_GE_strength_stability", width_in = 10, height_in = 4.5)
+if (!is.null(fig_panels$GE$freq_panel) && !is.null(fig_panels$SW$freq_panel)) {
+  fig5 <- (fig_panels$GE$freq_panel + ggtitle("A. GE stability selection")) |
+    (fig_panels$SW$freq_panel + ggtitle("B. SW stability selection"))
+  save_fig(fig5, "Figure_5_GE_SW_stability", width_in = 10, height_in = 4.5)
 }

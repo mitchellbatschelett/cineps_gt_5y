@@ -1,0 +1,3 @@
+"Predictor","Label","Test_Statistic","Test_Type","p_value","functional_ve","semi_partial_r"
+"Group","Group (VPT vs FT)",194.320000092247,"F",3.110408618051e-315,0.0236397558387532,0.0302679019837873
+"repol_rel_rms_mean","Motion (eddy relative RMS)",13.541426230142,"F",2.65291591293961e-14,0.00565978332049109,0.00658647631233076

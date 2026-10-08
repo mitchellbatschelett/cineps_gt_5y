@@ -1,12 +1,12 @@
 #!/bin/bash
 # =============================================================================
-# LSF ARRAY JOB: FDA Univariate Exposure-Metric Runs (28 cells)
+# LSF ARRAY JOB: FDA Univariate Exposure-Metric Runs (37 runs)
 # =============================================================================
 #
 # PURPOSE
-#   Submits all 28 (exposure, metric) FDA univariate cells as parallel array
-#   tasks. Each task runs THREE_fda_univariate_pipeline.R for one cell of the
-#   run table defined in THREE_fda_univariate_runs.R.
+#   Submits all 37 FDA univariate runs as parallel array tasks. Each task runs
+#   fda_pipeline.R for one run of the run table defined in
+#   THREE_fda_univariate_runs.R.
 #
 # RUN TABLE
 #   Index 1-7:   strength            x 7 exposures   (gaussian)
@@ -14,9 +14,12 @@
 #   Index 15-21: rand_norm_wei_ACC   x 7 exposures   (gaussian)
 #   Index 22-28: rand_norm_wei_SW    x 7 exposures   (gaussian; per Methods 2.7.4
 #                                                    SW univariate caveat)
-#
-#   Within each metric block, exposure order is:
-#     bpd2, bw_z, ga, globalbrainscore2, anyrop, sepsis2, dwma_percent
+#     within each block of 7: bpd2, bw_z_new, ga, globalbrainscore2, anyrop,
+#     sepsis2, dwma_percent
+#   Index 29:    rand_norm_wei_ACC ~ globalbrainscore2, high-GBA participants
+#                removed (Supp Note 6)
+#   Index 30-37: strength, rand_norm_wei_GE, rand_norm_wei_ACC, rand_norm_wei_SW
+#                x 2 exposures (anyivh, hydrocephalus_dc)   (gaussian)
 #
 # COMPUTATIONAL COST
 #   ~1-6 hours per cell on the configuration below.
@@ -26,7 +29,7 @@
 #
 # =============================================================================
 
-#BSUB -J "FDA_UNIV[16-17]"
+#BSUB -J "FDA_UNIV[1-37]"
 #BSUB -W 36:00
 #BSUB -n 24
 #BSUB -M 128000

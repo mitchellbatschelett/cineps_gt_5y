@@ -1,54 +1,30 @@
 ################################################################################
 #
-#   FDA STABILITY SELECTION RUN TABLE
+#   FOUR_fda_stability_selection_runs.R  -  stability selection
 #
-#   PURPOSE
-#     Driver for FOUR_fda_stability_selection_pipeline.R. Defines the 6 runs
-#     reported in the manuscript and supplement: four main-text metric runs
-#     (strength, normalized GE/ACC/SW) and two ACC sensitivity branches
-#     (Supp Note 6 / Supp Figs 15-16). Sets BATCH_* variables for one run
-#     selected by index and sources the pipeline.
+#   6 runs, each fit by FOUR_fda_stability_selection_pipeline.R:
+#     str, rand_norm_wei_GE, rand_norm_wei_ACC, rand_norm_wei_SW (scat final family),
+#     rand_norm_wei_ACC high_gba_rem, rand_norm_wei_ACC gba_binary (Supp Note 6)
+#   exposures: bpd2, bw_z_new, ga, globalbrainscore2 (sqrt), anyrop, sepsis2,
+#              anyivh, hydrocephalus_dc
+#   forced covariates: eTIV, sex, sriskscore, age_at_5y_mri, Rel_Motion
+#   metric-specific exclusions: rand_norm_wei_GE c(713, 659); none for other metrics
 #
-#   RUN TABLE (6 runs)
-#     1. str                main           gaussian
-#     2. rand_norm_wei_GE   main           gaussian
-#     3. rand_norm_wei_ACC  main           gaussian
-#     4. rand_norm_wei_SW   main           scat
-#     5. rand_norm_wei_ACC  high_gba_rem   gaussian   (Supp Fig 15)
-#     6. rand_norm_wei_ACC  gba_binary     gaussian   (Supp Fig 16)
+#   INDEX TABLE
+#     1 ACC_norm | 2 ACC high_gba_rem | 3 ACC gba_binary | 4 strength | 5 GE_norm | 6 SW
 #
-#   USAGE
-#     Rscript FOUR_fda_stability_selection_runs.R <run_index>
-#     where run_index is 1..6. To run interactively, set run_index manually
-#     and source.
+#   USAGE (Terminal)
+#     Rscript FOUR_fda_stability_selection_runs.R --list     # print the index table
+#     Rscript FOUR_fda_stability_selection_runs.R 1          # run one
+#   Run from Terminal rather than RStudio: the bootstrap forks worker processes.
 #
-#   COMPUTATIONAL COST
-#     See header of FOUR_fda_stability_selection_pipeline.R. Roughly two days 
-#     of total wall time for all six runs on a recent workstation.
+#   OUTPUT
+#     results/stability_selection/{metric_folder}/
+#     results/stability_selection/ACC_sensitivity/{branch}/
 #
 ################################################################################
 
-# ==============================================================================
-# COMMAND-LINE INDEX
-# ==============================================================================
-
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args) == 0) {
-  stop("Usage: Rscript FOUR_fda_stability_selection_runs.R <run_index>\n",
-       "  e.g., Rscript FOUR_fda_stability_selection_runs.R 1")
-}
-run_index <- as.integer(args[1])
-
-cat(sprintf("FDA Stability Selection Run - Index: %d\n", run_index))
-cat(sprintf("Timestamp: %s\n", Sys.time()))
-cat(sprintf("Node:      %s\n\n", Sys.info()["nodename"]))
-
-library(mgcv)  # for gaussian() / scat() inside the runs list
-
-# ==============================================================================
-# PATHS
-# ==============================================================================
-
+# ------------------------------------------------------------------ CONFIG
 # Repo root is located automatically so a fresh clone runs without edits.
 # Order: (0) honor a `repo_root` already set in the global env; (1) derive this
 # script's own location and walk upward; (2) walk upward from the working dir.
@@ -88,143 +64,89 @@ if (exists("repo_root", inherits = TRUE) && is.character(repo_root) &&
 }
 cat(sprintf("Repo root: %s\n", repo_root))
 
-pipeline_script <- file.path(repo_root,
-                             "code/03_statistical_analysis",
-                             "FOUR_fda_stability_selection_pipeline.R")
-data_path       <- file.path(repo_root,
-                             "data/analysis_ready/cohort_171VPT_postVQC.xlsx")
-output_dir_base <- file.path(repo_root,
-                             "results/fda_stability_selection")
+DATA_PATH       <- file.path(repo_root, "data/analysis_ready/cohort_171VPT_postVQC.xlsx")
+OUT_BASE        <- file.path(repo_root, "results/stability_selection")
+PIPELINE_SCRIPT <- file.path(repo_root, "code/03_statistical_analysis/FOUR_fda_stability_selection_pipeline.R")
 
-# ==============================================================================
-# SHARED PARAMETERS
-# ==============================================================================
+library(mgcv)   # so scat() / gaussian() resolve
 
-forced_covariates_default <- c("eTIV", "sex", "sriskscore",
-                               "age_at_5y_mri", "Rel_Motion")
-exposures_default <- c("bpd2", "bw_z", "ga", "globalbrainscore2",
-                       "anyrop", "sepsis2")
-categorical_exposures_default <- c("bpd2", "anyrop", "sepsis2")
+base_runs <- list(
+  list(metric = "rand_norm_wei_ACC", folder = "ACC_norm", branch = "main",         family = "gaussian", gbs2 = "sqrt"),
+  list(metric = "rand_norm_wei_ACC", folder = "ACC_norm", branch = "high_gba_rem", family = "gaussian", gbs2 = "sqrt"),
+  list(metric = "rand_norm_wei_ACC", folder = "ACC_norm", branch = "gba_binary",   family = "gaussian", gbs2 = "none"),
+  list(metric = "str",               folder = "strength", branch = "main",         family = "gaussian", gbs2 = "sqrt"),
+  list(metric = "rand_norm_wei_GE",  folder = "GE_norm",  branch = "main",         family = "gaussian", gbs2 = "sqrt"),
+  list(metric = "rand_norm_wei_SW",  folder = "SW",       branch = "main",         family = "scat",     gbs2 = "sqrt")
+)
+
+exposures_default             <- c("bpd2", "bw_z_new", "ga", "globalbrainscore2", "anyrop", "sepsis2", "anyivh", "hydrocephalus_dc")
+categorical_exposures_default <- c("bpd2", "anyrop", "sepsis2", "anyivh", "hydrocephalus_dc")
 categorical_forced_default    <- c("sex")
 
-# Methods 2.7.2 metric-specific outlier exclusions
-metric_outliers <- list(
-  "str"               = c(128, 713),
-  "rand_norm_wei_GE"  = c(659),
-  "rand_norm_wei_ACC" = c(),
-  "rand_norm_wei_SW"  = c(309, 321, 8155)
-)
-
-# ==============================================================================
-# RUN TABLE
-# ==============================================================================
-
-runs <- list(
-  
-  # 1. Strength (main)
-  list(metric              = "str",
-       sensitivity_branch  = "main",
-       pffr_family_final   = gaussian(),
-       subjects_to_exclude = metric_outliers[["str"]],
-       gbs2_transform      = "sqrt"),
-  
-  # 2. Normalized GE (main)
-  list(metric              = "rand_norm_wei_GE",
-       sensitivity_branch  = "main",
-       pffr_family_final   = gaussian(),
-       subjects_to_exclude = metric_outliers[["rand_norm_wei_GE"]],
-       gbs2_transform      = "sqrt"),
-  
-  # 3. Normalized ACC (main; Fig 3)
-  list(metric              = "rand_norm_wei_ACC",
-       sensitivity_branch  = "main",
-       pffr_family_final   = gaussian(),
-       subjects_to_exclude = metric_outliers[["rand_norm_wei_ACC"]],
-       gbs2_transform      = "sqrt"),
-  
-  # 4. Normalized SW (main; Fig 4) - scat family per Methods 2.7.3/2.7.4
-  list(metric              = "rand_norm_wei_SW",
-       sensitivity_branch  = "main",
-       pffr_family_final   = scat(),
-       subjects_to_exclude = metric_outliers[["rand_norm_wei_SW"]],
-       gbs2_transform      = "sqrt"),
-  
-  # 5. ACC sensitivity: high-GBA participants removed (Supp Fig 15)
-  list(metric              = "rand_norm_wei_ACC",
-       sensitivity_branch  = "high_gba_rem",
-       pffr_family_final   = gaussian(),
-       subjects_to_exclude = metric_outliers[["rand_norm_wei_ACC"]],
-       gbs2_transform      = "sqrt"),
-  
-  # 6. ACC sensitivity: GBA recoded as binary (>=8 vs <8) (Supp Fig 16)
-  list(metric              = "rand_norm_wei_ACC",
-       sensitivity_branch  = "gba_binary",
-       pffr_family_final   = gaussian(),
-       subjects_to_exclude = metric_outliers[["rand_norm_wei_ACC"]],
-       gbs2_transform      = "none")
-)
+runs <- list()
+for (b in base_runs) {
+  out_dir <- if (b$branch == "main") {
+    file.path(OUT_BASE, b$folder)
+  } else {
+    file.path(OUT_BASE, "ACC_sensitivity", b$branch)
+  }
+  runs[[length(runs) + 1]] <- c(b, list(
+    pipeline  = "repol",
+    forced    = c("eTIV", "sex", "sriskscore", "age_at_5y_mri", "Rel_Motion"),
+    data_path = DATA_PATH,
+    out_dir   = out_dir))
+}
 stopifnot(length(runs) == 6)
 
-# ==============================================================================
-# VALIDATE INDEX
-# ==============================================================================
+index_table <- do.call(rbind, lapply(seq_along(runs), function(i) {
+  r <- runs[[i]]
+  data.frame(index = i, pipeline = r$pipeline, metric = r$metric, branch = r$branch,
+             final_family = r$family, forced = paste(r$forced, collapse = " + "),
+             output_dir = r$out_dir, stringsAsFactors = FALSE)
+}))
 
-if (run_index < 1 || run_index > length(runs)) {
-  stop(sprintf("Run index %d is out of range. Valid range: 1-%d",
-               run_index, length(runs)))
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) == 0) stop("Usage: Rscript FOUR_fda_stability_selection_runs.R <index 1-6> | --list")
+if (args[1] == "--list") {
+  print(index_table[, c("index", "pipeline", "metric", "branch", "final_family")], row.names = FALSE)
+  dir.create(OUT_BASE, recursive = TRUE, showWarnings = FALSE)
+  write.csv(index_table, file.path(OUT_BASE, "run_index_stability_selection.csv"), row.names = FALSE)
+  quit(status = 0)
 }
 
-run <- runs[[run_index]]
+run_index <- as.integer(args[1])
+if (is.na(run_index) || run_index < 1 || run_index > length(runs))
+  stop(sprintf("Index %s out of range 1-%d", args[1], length(runs)))
+r <- runs[[run_index]]
+if (!file.exists(r$data_path))       stop("Data file not found: ", r$data_path)
+if (!file.exists(PIPELINE_SCRIPT))   stop("Pipeline not found: ", PIPELINE_SCRIPT)
+dir.create(r$out_dir, recursive = TRUE, showWarnings = FALSE)
 
-# ==============================================================================
-# BUILD OUTPUT DIRECTORY NAME
-# ==============================================================================
-
-density_str <- "11-100"
-if (run$sensitivity_branch == "main") {
-  output_dirname <- paste(run$metric, "stabsel", density_str, sep = "_")
-  output_dir <- file.path(output_dir_base, output_dirname)
-} else {
-  output_dirname <- paste(run$metric, "stabsel", density_str,
-                          run$sensitivity_branch, sep = "_")
-  output_dir <- file.path(output_dir_base, "ACC_sensitivity", output_dirname)
-}
-
-cat(sprintf("Metric:     %s\n", run$metric))
-cat(sprintf("Sensitivity: %s\n", run$sensitivity_branch))
-cat(sprintf("Family:     %s\n",
-            if (inherits(run$pffr_family_final, "general.family"))
-              "scat" else run$pffr_family_final$family))
-cat(sprintf("Outliers:   %s\n",
-            if (length(run$subjects_to_exclude) > 0)
-              paste(run$subjects_to_exclude, collapse = ", ") else "none"))
-cat(sprintf("Output:     %s\n\n", output_dir))
-
-# ==============================================================================
-# SET BATCH VARIABLES AND SOURCE THE PIPELINE
-# ==============================================================================
+cat(sprintf("Stability selection - index %d / %d | %s | %s | %s | final family %s\n",
+            run_index, length(runs), r$pipeline, r$metric, r$branch, r$family))
+cat(sprintf("Started %s\n", format(Sys.time())))
 
 BATCH_MODE                  <<- TRUE
-BATCH_metric                <<- run$metric
-BATCH_forced_covariates     <<- forced_covariates_default
+BATCH_metric                <<- r$metric
+BATCH_forced_covariates     <<- r$forced
 BATCH_exposures             <<- exposures_default
 BATCH_categorical_exposures <<- categorical_exposures_default
 BATCH_categorical_forced    <<- categorical_forced_default
 BATCH_density_min           <<- 11
 BATCH_density_max           <<- 100
-BATCH_pffr_family_final     <<- run$pffr_family_final
-BATCH_subjects_to_exclude   <<- run$subjects_to_exclude
-BATCH_sensitivity_branch    <<- run$sensitivity_branch
-BATCH_gbs2_transform        <<- run$gbs2_transform
-BATCH_output_dir            <<- output_dir
-BATCH_data_path             <<- data_path
+BATCH_pffr_family_final     <<- if (r$family == "scat") scat() else gaussian()
+BATCH_subjects_to_exclude   <<- if (r$metric == "rand_norm_wei_GE") c(713, 659) else c()
+BATCH_sensitivity_branch    <<- r$branch
+BATCH_gbs2_transform        <<- r$gbs2
+BATCH_output_dir            <<- r$out_dir
+BATCH_data_path             <<- r$data_path
 
 tryCatch({
-  source(pipeline_script)
-  cat("\n\n=== RUN COMPLETED SUCCESSFULLY ===\n")
+  source(PIPELINE_SCRIPT)
+  writeLines(sprintf("Finished %s", format(Sys.time())), file.path(r$out_dir, "RUN_COMPLETE.txt"))
+  cat("\n=== RUN COMPLETED SUCCESSFULLY ===\n")
 }, error = function(e) {
-  cat(sprintf("\n\n!!! RUN FAILED: %s\n", e$message))
+  cat(sprintf("\n!!! RUN FAILED: %s\n", conditionMessage(e)))
   quit(status = 1)
 })
-
-cat(sprintf("Finished: %s\n", Sys.time()))
+cat(sprintf("Finished %s\n", format(Sys.time())))

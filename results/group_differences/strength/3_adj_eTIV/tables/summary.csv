@@ -1,0 +1,2 @@
+"Index","Pipeline","Analysis","Metric","Metric_Label","Model","Predictors","Family","Density_Range","N_Original","N_Excluded_IDs","N_Final","N_Depth_Flagged","GBA_Sqrt_Applied","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold","Bootstrap_Completed"
+3,"repol","group_differences","str","Strength","Adjusted: eTIV","Group, eTIV","gaussian","11-100%",216,0,216,11,FALSE,0.526332706333861,0.486943851409768,"R^2",5.27850646113716,"F",1.5450499711804e-09,TRUE,0.001,TRUE

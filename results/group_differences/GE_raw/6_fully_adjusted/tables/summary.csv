@@ -1,0 +1,2 @@
+"Index","Pipeline","Analysis","Metric","Metric_Label","Model","Predictors","Family","Density_Range","N_Original","N_Excluded_IDs","N_Final","N_Depth_Flagged","GBA_Sqrt_Applied","Variance_Explained","Functional_VE","VE_Label","Overall_Test_Statistic","Overall_Test_Type","Overall_p","Overall_Significant","P_Threshold","Bootstrap_Completed"
+24,"repol","group_differences","GE","Raw GE","Fully adjusted","Group, age_at_5y_mri, eTIV, sex, repol_rel_rms_mean","gaussian","11-100%",216,0,216,11,FALSE,0.479836372324534,0.47983642431644,"R^2",NA,"F",NA,NA,0.001,TRUE

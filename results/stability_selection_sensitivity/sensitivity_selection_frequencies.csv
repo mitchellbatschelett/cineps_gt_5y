@@ -1,0 +1,257 @@
+"metric","config","n_splits","n_successful","subsample","pve","exposure","selection_frequency"
+"strength","splits100 (main)",100,100,0.6,0.995,"bpd2",0.41
+"strength","splits100 (main)",100,100,0.6,0.995,"bw_z_new",0.46
+"strength","splits100 (main)",100,100,0.6,0.995,"ga",0.48
+"strength","splits100 (main)",100,100,0.6,0.995,"globalbrainscore2",0.76
+"strength","splits100 (main)",100,100,0.6,0.995,"anyrop",0.29
+"strength","splits100 (main)",100,100,0.6,0.995,"sepsis2",0.31
+"strength","splits100 (main)",100,100,0.6,0.995,"anyivh",0.47
+"strength","splits100 (main)",100,100,0.6,0.995,"hydrocephalus_dc",0.52
+"GE_norm","splits100 (main)",100,100,0.6,0.995,"bpd2",0.22
+"GE_norm","splits100 (main)",100,100,0.6,0.995,"bw_z_new",0.4
+"GE_norm","splits100 (main)",100,100,0.6,0.995,"ga",0.13
+"GE_norm","splits100 (main)",100,100,0.6,0.995,"globalbrainscore2",0.17
+"GE_norm","splits100 (main)",100,100,0.6,0.995,"anyrop",0.36
+"GE_norm","splits100 (main)",100,100,0.6,0.995,"sepsis2",0.19
+"GE_norm","splits100 (main)",100,100,0.6,0.995,"anyivh",0.19
+"GE_norm","splits100 (main)",100,100,0.6,0.995,"hydrocephalus_dc",0.2
+"ACC_norm","splits100 (main)",100,100,0.6,0.995,"bpd2",0.39
+"ACC_norm","splits100 (main)",100,100,0.6,0.995,"bw_z_new",0.14
+"ACC_norm","splits100 (main)",100,100,0.6,0.995,"ga",0.36
+"ACC_norm","splits100 (main)",100,100,0.6,0.995,"globalbrainscore2",0.74
+"ACC_norm","splits100 (main)",100,100,0.6,0.995,"anyrop",0.27
+"ACC_norm","splits100 (main)",100,100,0.6,0.995,"sepsis2",0.37
+"ACC_norm","splits100 (main)",100,100,0.6,0.995,"anyivh",0.24
+"ACC_norm","splits100 (main)",100,100,0.6,0.995,"hydrocephalus_dc",0.4
+"SW","splits100 (main)",100,100,0.6,0.995,"bpd2",0.14
+"SW","splits100 (main)",100,100,0.6,0.995,"bw_z_new",0.13
+"SW","splits100 (main)",100,100,0.6,0.995,"ga",0.54
+"SW","splits100 (main)",100,100,0.6,0.995,"globalbrainscore2",0.34
+"SW","splits100 (main)",100,100,0.6,0.995,"anyrop",0.45
+"SW","splits100 (main)",100,100,0.6,0.995,"sepsis2",0.17
+"SW","splits100 (main)",100,100,0.6,0.995,"anyivh",0.22
+"SW","splits100 (main)",100,100,0.6,0.995,"hydrocephalus_dc",0.06
+"strength","splits200",200,200,0.6,0.995,"bpd2",0.44
+"strength","splits200",200,200,0.6,0.995,"bw_z_new",0.51
+"strength","splits200",200,200,0.6,0.995,"ga",0.48
+"strength","splits200",200,200,0.6,0.995,"globalbrainscore2",0.78
+"strength","splits200",200,200,0.6,0.995,"anyrop",0.27
+"strength","splits200",200,200,0.6,0.995,"sepsis2",0.335
+"strength","splits200",200,200,0.6,0.995,"anyivh",0.49
+"strength","splits200",200,200,0.6,0.995,"hydrocephalus_dc",0.585
+"GE_norm","splits200",200,200,0.6,0.995,"bpd2",0.265
+"GE_norm","splits200",200,200,0.6,0.995,"bw_z_new",0.415
+"GE_norm","splits200",200,200,0.6,0.995,"ga",0.175
+"GE_norm","splits200",200,200,0.6,0.995,"globalbrainscore2",0.235
+"GE_norm","splits200",200,200,0.6,0.995,"anyrop",0.4
+"GE_norm","splits200",200,200,0.6,0.995,"sepsis2",0.235
+"GE_norm","splits200",200,200,0.6,0.995,"anyivh",0.23
+"GE_norm","splits200",200,200,0.6,0.995,"hydrocephalus_dc",0.26
+"ACC_norm","splits200",200,200,0.6,0.995,"bpd2",0.43
+"ACC_norm","splits200",200,200,0.6,0.995,"bw_z_new",0.115
+"ACC_norm","splits200",200,200,0.6,0.995,"ga",0.395
+"ACC_norm","splits200",200,200,0.6,0.995,"globalbrainscore2",0.75
+"ACC_norm","splits200",200,200,0.6,0.995,"anyrop",0.27
+"ACC_norm","splits200",200,200,0.6,0.995,"sepsis2",0.38
+"ACC_norm","splits200",200,200,0.6,0.995,"anyivh",0.215
+"ACC_norm","splits200",200,200,0.6,0.995,"hydrocephalus_dc",0.49
+"SW","splits200",200,200,0.6,0.995,"bpd2",0.145
+"SW","splits200",200,200,0.6,0.995,"bw_z_new",0.14
+"SW","splits200",200,200,0.6,0.995,"ga",0.565
+"SW","splits200",200,200,0.6,0.995,"globalbrainscore2",0.315
+"SW","splits200",200,200,0.6,0.995,"anyrop",0.41
+"SW","splits200",200,200,0.6,0.995,"sepsis2",0.165
+"SW","splits200",200,200,0.6,0.995,"anyivh",0.22
+"SW","splits200",200,200,0.6,0.995,"hydrocephalus_dc",0.075
+"strength","splits200_sub0.50",200,200,0.5,0.995,"bpd2",0.355
+"strength","splits200_sub0.50",200,200,0.5,0.995,"bw_z_new",0.425
+"strength","splits200_sub0.50",200,200,0.5,0.995,"ga",0.475
+"strength","splits200_sub0.50",200,200,0.5,0.995,"globalbrainscore2",0.695
+"strength","splits200_sub0.50",200,200,0.5,0.995,"anyrop",0.315
+"strength","splits200_sub0.50",200,200,0.5,0.995,"sepsis2",0.32
+"strength","splits200_sub0.50",200,200,0.5,0.995,"anyivh",0.465
+"strength","splits200_sub0.50",200,200,0.5,0.995,"hydrocephalus_dc",0.48
+"GE_norm","splits200_sub0.50",200,200,0.5,0.995,"bpd2",0.27
+"GE_norm","splits200_sub0.50",200,200,0.5,0.995,"bw_z_new",0.42
+"GE_norm","splits200_sub0.50",200,200,0.5,0.995,"ga",0.16
+"GE_norm","splits200_sub0.50",200,200,0.5,0.995,"globalbrainscore2",0.215
+"GE_norm","splits200_sub0.50",200,200,0.5,0.995,"anyrop",0.34
+"GE_norm","splits200_sub0.50",200,200,0.5,0.995,"sepsis2",0.235
+"GE_norm","splits200_sub0.50",200,200,0.5,0.995,"anyivh",0.22
+"GE_norm","splits200_sub0.50",200,200,0.5,0.995,"hydrocephalus_dc",0.235
+"ACC_norm","splits200_sub0.50",200,200,0.5,0.995,"bpd2",0.405
+"ACC_norm","splits200_sub0.50",200,200,0.5,0.995,"bw_z_new",0.185
+"ACC_norm","splits200_sub0.50",200,200,0.5,0.995,"ga",0.275
+"ACC_norm","splits200_sub0.50",200,200,0.5,0.995,"globalbrainscore2",0.68
+"ACC_norm","splits200_sub0.50",200,200,0.5,0.995,"anyrop",0.27
+"ACC_norm","splits200_sub0.50",200,200,0.5,0.995,"sepsis2",0.35
+"ACC_norm","splits200_sub0.50",200,200,0.5,0.995,"anyivh",0.235
+"ACC_norm","splits200_sub0.50",200,200,0.5,0.995,"hydrocephalus_dc",0.385
+"SW","splits200_sub0.50",200,200,0.5,0.995,"bpd2",0.145
+"SW","splits200_sub0.50",200,200,0.5,0.995,"bw_z_new",0.16
+"SW","splits200_sub0.50",200,200,0.5,0.995,"ga",0.46
+"SW","splits200_sub0.50",200,200,0.5,0.995,"globalbrainscore2",0.33
+"SW","splits200_sub0.50",200,200,0.5,0.995,"anyrop",0.4
+"SW","splits200_sub0.50",200,200,0.5,0.995,"sepsis2",0.18
+"SW","splits200_sub0.50",200,200,0.5,0.995,"anyivh",0.21
+"SW","splits200_sub0.50",200,200,0.5,0.995,"hydrocephalus_dc",0.085
+"strength","splits200_sub0.70",200,200,0.7,0.995,"bpd2",0.505
+"strength","splits200_sub0.70",200,200,0.7,0.995,"bw_z_new",0.605
+"strength","splits200_sub0.70",200,200,0.7,0.995,"ga",0.575
+"strength","splits200_sub0.70",200,200,0.7,0.995,"globalbrainscore2",0.86
+"strength","splits200_sub0.70",200,200,0.7,0.995,"anyrop",0.37
+"strength","splits200_sub0.70",200,200,0.7,0.995,"sepsis2",0.335
+"strength","splits200_sub0.70",200,200,0.7,0.995,"anyivh",0.595
+"strength","splits200_sub0.70",200,200,0.7,0.995,"hydrocephalus_dc",0.655
+"GE_norm","splits200_sub0.70",200,200,0.7,0.995,"bpd2",0.245
+"GE_norm","splits200_sub0.70",200,200,0.7,0.995,"bw_z_new",0.42
+"GE_norm","splits200_sub0.70",200,200,0.7,0.995,"ga",0.155
+"GE_norm","splits200_sub0.70",200,200,0.7,0.995,"globalbrainscore2",0.205
+"GE_norm","splits200_sub0.70",200,200,0.7,0.995,"anyrop",0.42
+"GE_norm","splits200_sub0.70",200,200,0.7,0.995,"sepsis2",0.195
+"GE_norm","splits200_sub0.70",200,200,0.7,0.995,"anyivh",0.235
+"GE_norm","splits200_sub0.70",200,200,0.7,0.995,"hydrocephalus_dc",0.2
+"ACC_norm","splits200_sub0.70",200,200,0.7,0.995,"bpd2",0.595
+"ACC_norm","splits200_sub0.70",200,200,0.7,0.995,"bw_z_new",0.14
+"ACC_norm","splits200_sub0.70",200,200,0.7,0.995,"ga",0.41
+"ACC_norm","splits200_sub0.70",200,200,0.7,0.995,"globalbrainscore2",0.845
+"ACC_norm","splits200_sub0.70",200,200,0.7,0.995,"anyrop",0.335
+"ACC_norm","splits200_sub0.70",200,200,0.7,0.995,"sepsis2",0.455
+"ACC_norm","splits200_sub0.70",200,200,0.7,0.995,"anyivh",0.195
+"ACC_norm","splits200_sub0.70",200,200,0.7,0.995,"hydrocephalus_dc",0.605
+"SW","splits200_sub0.70",200,200,0.7,0.995,"bpd2",0.08
+"SW","splits200_sub0.70",200,200,0.7,0.995,"bw_z_new",0.075
+"SW","splits200_sub0.70",200,200,0.7,0.995,"ga",0.625
+"SW","splits200_sub0.70",200,200,0.7,0.995,"globalbrainscore2",0.335
+"SW","splits200_sub0.70",200,200,0.7,0.995,"anyrop",0.495
+"SW","splits200_sub0.70",200,200,0.7,0.995,"sepsis2",0.1
+"SW","splits200_sub0.70",200,200,0.7,0.995,"anyivh",0.235
+"SW","splits200_sub0.70",200,200,0.7,0.995,"hydrocephalus_dc",0.065
+"strength","splits200_sub0.80",200,200,0.8,0.995,"bpd2",0.665
+"strength","splits200_sub0.80",200,200,0.8,0.995,"bw_z_new",0.715
+"strength","splits200_sub0.80",200,200,0.8,0.995,"ga",0.71
+"strength","splits200_sub0.80",200,200,0.8,0.995,"globalbrainscore2",0.89
+"strength","splits200_sub0.80",200,200,0.8,0.995,"anyrop",0.41
+"strength","splits200_sub0.80",200,200,0.8,0.995,"sepsis2",0.435
+"strength","splits200_sub0.80",200,200,0.8,0.995,"anyivh",0.745
+"strength","splits200_sub0.80",200,200,0.8,0.995,"hydrocephalus_dc",0.77
+"GE_norm","splits200_sub0.80",200,200,0.8,0.995,"bpd2",0.21
+"GE_norm","splits200_sub0.80",200,200,0.8,0.995,"bw_z_new",0.41
+"GE_norm","splits200_sub0.80",200,200,0.8,0.995,"ga",0.15
+"GE_norm","splits200_sub0.80",200,200,0.8,0.995,"globalbrainscore2",0.18
+"GE_norm","splits200_sub0.80",200,200,0.8,0.995,"anyrop",0.4
+"GE_norm","splits200_sub0.80",200,200,0.8,0.995,"sepsis2",0.17
+"GE_norm","splits200_sub0.80",200,200,0.8,0.995,"anyivh",0.21
+"GE_norm","splits200_sub0.80",200,200,0.8,0.995,"hydrocephalus_dc",0.2
+"ACC_norm","splits200_sub0.80",200,200,0.8,0.995,"bpd2",0.74
+"ACC_norm","splits200_sub0.80",200,200,0.8,0.995,"bw_z_new",0.095
+"ACC_norm","splits200_sub0.80",200,200,0.8,0.995,"ga",0.49
+"ACC_norm","splits200_sub0.80",200,200,0.8,0.995,"globalbrainscore2",0.94
+"ACC_norm","splits200_sub0.80",200,200,0.8,0.995,"anyrop",0.44
+"ACC_norm","splits200_sub0.80",200,200,0.8,0.995,"sepsis2",0.575
+"ACC_norm","splits200_sub0.80",200,200,0.8,0.995,"anyivh",0.135
+"ACC_norm","splits200_sub0.80",200,200,0.8,0.995,"hydrocephalus_dc",0.75
+"SW","splits200_sub0.80",200,200,0.8,0.995,"bpd2",0.05
+"SW","splits200_sub0.80",200,200,0.8,0.995,"bw_z_new",0.05
+"SW","splits200_sub0.80",200,200,0.8,0.995,"ga",0.735
+"SW","splits200_sub0.80",200,200,0.8,0.995,"globalbrainscore2",0.38
+"SW","splits200_sub0.80",200,200,0.8,0.995,"anyrop",0.54
+"SW","splits200_sub0.80",200,200,0.8,0.995,"sepsis2",0.075
+"SW","splits200_sub0.80",200,200,0.8,0.995,"anyivh",0.22
+"SW","splits200_sub0.80",200,200,0.8,0.995,"hydrocephalus_dc",0.035
+"strength","splits200_pve0.90",200,200,0.6,0.9,"bpd2",0.44
+"strength","splits200_pve0.90",200,200,0.6,0.9,"bw_z_new",0.51
+"strength","splits200_pve0.90",200,200,0.6,0.9,"ga",0.48
+"strength","splits200_pve0.90",200,200,0.6,0.9,"globalbrainscore2",0.78
+"strength","splits200_pve0.90",200,200,0.6,0.9,"anyrop",0.27
+"strength","splits200_pve0.90",200,200,0.6,0.9,"sepsis2",0.335
+"strength","splits200_pve0.90",200,200,0.6,0.9,"anyivh",0.49
+"strength","splits200_pve0.90",200,200,0.6,0.9,"hydrocephalus_dc",0.585
+"GE_norm","splits200_pve0.90",200,200,0.6,0.9,"bpd2",0.26
+"GE_norm","splits200_pve0.90",200,200,0.6,0.9,"bw_z_new",0.41
+"GE_norm","splits200_pve0.90",200,200,0.6,0.9,"ga",0.175
+"GE_norm","splits200_pve0.90",200,200,0.6,0.9,"globalbrainscore2",0.23
+"GE_norm","splits200_pve0.90",200,200,0.6,0.9,"anyrop",0.395
+"GE_norm","splits200_pve0.90",200,200,0.6,0.9,"sepsis2",0.235
+"GE_norm","splits200_pve0.90",200,200,0.6,0.9,"anyivh",0.23
+"GE_norm","splits200_pve0.90",200,200,0.6,0.9,"hydrocephalus_dc",0.255
+"ACC_norm","splits200_pve0.90",200,200,0.6,0.9,"bpd2",0.44
+"ACC_norm","splits200_pve0.90",200,200,0.6,0.9,"bw_z_new",0.155
+"ACC_norm","splits200_pve0.90",200,200,0.6,0.9,"ga",0.385
+"ACC_norm","splits200_pve0.90",200,200,0.6,0.9,"globalbrainscore2",0.76
+"ACC_norm","splits200_pve0.90",200,200,0.6,0.9,"anyrop",0.245
+"ACC_norm","splits200_pve0.90",200,200,0.6,0.9,"sepsis2",0.375
+"ACC_norm","splits200_pve0.90",200,200,0.6,0.9,"anyivh",0.235
+"ACC_norm","splits200_pve0.90",200,200,0.6,0.9,"hydrocephalus_dc",0.45
+"SW","splits200_pve0.90",200,200,0.6,0.9,"bpd2",0.125
+"SW","splits200_pve0.90",200,200,0.6,0.9,"bw_z_new",0.115
+"SW","splits200_pve0.90",200,200,0.6,0.9,"ga",0.575
+"SW","splits200_pve0.90",200,200,0.6,0.9,"globalbrainscore2",0.355
+"SW","splits200_pve0.90",200,200,0.6,0.9,"anyrop",0.45
+"SW","splits200_pve0.90",200,200,0.6,0.9,"sepsis2",0.14
+"SW","splits200_pve0.90",200,200,0.6,0.9,"anyivh",0.24
+"SW","splits200_pve0.90",200,200,0.6,0.9,"hydrocephalus_dc",0.105
+"strength","splits200_pve0.95",200,200,0.6,0.95,"bpd2",0.44
+"strength","splits200_pve0.95",200,200,0.6,0.95,"bw_z_new",0.51
+"strength","splits200_pve0.95",200,200,0.6,0.95,"ga",0.48
+"strength","splits200_pve0.95",200,200,0.6,0.95,"globalbrainscore2",0.78
+"strength","splits200_pve0.95",200,200,0.6,0.95,"anyrop",0.27
+"strength","splits200_pve0.95",200,200,0.6,0.95,"sepsis2",0.335
+"strength","splits200_pve0.95",200,200,0.6,0.95,"anyivh",0.49
+"strength","splits200_pve0.95",200,200,0.6,0.95,"hydrocephalus_dc",0.585
+"GE_norm","splits200_pve0.95",200,200,0.6,0.95,"bpd2",0.26
+"GE_norm","splits200_pve0.95",200,200,0.6,0.95,"bw_z_new",0.41
+"GE_norm","splits200_pve0.95",200,200,0.6,0.95,"ga",0.175
+"GE_norm","splits200_pve0.95",200,200,0.6,0.95,"globalbrainscore2",0.23
+"GE_norm","splits200_pve0.95",200,200,0.6,0.95,"anyrop",0.395
+"GE_norm","splits200_pve0.95",200,200,0.6,0.95,"sepsis2",0.235
+"GE_norm","splits200_pve0.95",200,200,0.6,0.95,"anyivh",0.23
+"GE_norm","splits200_pve0.95",200,200,0.6,0.95,"hydrocephalus_dc",0.255
+"ACC_norm","splits200_pve0.95",200,200,0.6,0.95,"bpd2",0.44
+"ACC_norm","splits200_pve0.95",200,200,0.6,0.95,"bw_z_new",0.155
+"ACC_norm","splits200_pve0.95",200,200,0.6,0.95,"ga",0.385
+"ACC_norm","splits200_pve0.95",200,200,0.6,0.95,"globalbrainscore2",0.76
+"ACC_norm","splits200_pve0.95",200,200,0.6,0.95,"anyrop",0.245
+"ACC_norm","splits200_pve0.95",200,200,0.6,0.95,"sepsis2",0.375
+"ACC_norm","splits200_pve0.95",200,200,0.6,0.95,"anyivh",0.235
+"ACC_norm","splits200_pve0.95",200,200,0.6,0.95,"hydrocephalus_dc",0.45
+"SW","splits200_pve0.95",200,200,0.6,0.95,"bpd2",0.125
+"SW","splits200_pve0.95",200,200,0.6,0.95,"bw_z_new",0.115
+"SW","splits200_pve0.95",200,200,0.6,0.95,"ga",0.575
+"SW","splits200_pve0.95",200,200,0.6,0.95,"globalbrainscore2",0.355
+"SW","splits200_pve0.95",200,200,0.6,0.95,"anyrop",0.45
+"SW","splits200_pve0.95",200,200,0.6,0.95,"sepsis2",0.14
+"SW","splits200_pve0.95",200,200,0.6,0.95,"anyivh",0.24
+"SW","splits200_pve0.95",200,200,0.6,0.95,"hydrocephalus_dc",0.105
+"strength","splits200_pve0.99",200,200,0.6,0.99,"bpd2",0.44
+"strength","splits200_pve0.99",200,200,0.6,0.99,"bw_z_new",0.51
+"strength","splits200_pve0.99",200,200,0.6,0.99,"ga",0.48
+"strength","splits200_pve0.99",200,200,0.6,0.99,"globalbrainscore2",0.78
+"strength","splits200_pve0.99",200,200,0.6,0.99,"anyrop",0.27
+"strength","splits200_pve0.99",200,200,0.6,0.99,"sepsis2",0.335
+"strength","splits200_pve0.99",200,200,0.6,0.99,"anyivh",0.49
+"strength","splits200_pve0.99",200,200,0.6,0.99,"hydrocephalus_dc",0.585
+"GE_norm","splits200_pve0.99",200,200,0.6,0.99,"bpd2",0.26
+"GE_norm","splits200_pve0.99",200,200,0.6,0.99,"bw_z_new",0.41
+"GE_norm","splits200_pve0.99",200,200,0.6,0.99,"ga",0.175
+"GE_norm","splits200_pve0.99",200,200,0.6,0.99,"globalbrainscore2",0.23
+"GE_norm","splits200_pve0.99",200,200,0.6,0.99,"anyrop",0.395
+"GE_norm","splits200_pve0.99",200,200,0.6,0.99,"sepsis2",0.235
+"GE_norm","splits200_pve0.99",200,200,0.6,0.99,"anyivh",0.23
+"GE_norm","splits200_pve0.99",200,200,0.6,0.99,"hydrocephalus_dc",0.255
+"ACC_norm","splits200_pve0.99",200,200,0.6,0.99,"bpd2",0.435
+"ACC_norm","splits200_pve0.99",200,200,0.6,0.99,"bw_z_new",0.12
+"ACC_norm","splits200_pve0.99",200,200,0.6,0.99,"ga",0.38
+"ACC_norm","splits200_pve0.99",200,200,0.6,0.99,"globalbrainscore2",0.785
+"ACC_norm","splits200_pve0.99",200,200,0.6,0.99,"anyrop",0.235
+"ACC_norm","splits200_pve0.99",200,200,0.6,0.99,"sepsis2",0.36
+"ACC_norm","splits200_pve0.99",200,200,0.6,0.99,"anyivh",0.2
+"ACC_norm","splits200_pve0.99",200,200,0.6,0.99,"hydrocephalus_dc",0.48
+"SW","splits200_pve0.99",200,200,0.6,0.99,"bpd2",0.115
+"SW","splits200_pve0.99",200,200,0.6,0.99,"bw_z_new",0.09
+"SW","splits200_pve0.99",200,200,0.6,0.99,"ga",0.555
+"SW","splits200_pve0.99",200,200,0.6,0.99,"globalbrainscore2",0.335
+"SW","splits200_pve0.99",200,200,0.6,0.99,"anyrop",0.425
+"SW","splits200_pve0.99",200,200,0.6,0.99,"sepsis2",0.14
+"SW","splits200_pve0.99",200,200,0.6,0.99,"anyivh",0.215
+"SW","splits200_pve0.99",200,200,0.6,0.99,"hydrocephalus_dc",0.1
